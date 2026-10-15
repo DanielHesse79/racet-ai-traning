@@ -1,0 +1,6 @@
+# Det modellerna lär sig skapas vid körning (race_laya.pt är över 100 MB)
+memory/
+__pycache__/
+*.pyc
+# Lokala inställningar för Claude-förhandsvisningen
+.claude/

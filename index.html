@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spelen – spelade av grafikkortet</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@500;700&family=Poppins:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
+<style>
+  /* Brädet är ljust, i en mörk ram. */
+  :root {
+    --sheet: #f4f7f0; --cell: #e5ebdf; --snake: #22a861; --head: #157a43; --apple: #e5484d;
+    --car: #2a6fdb; --traffic: #8a94a6; --glass: #ffffffb3; --safe: #cfe6f5; --hole: #24456b;
+    --gold: #f5a623; --player: #1d2238; --label: #5b6478;
+  }
+  .board canvas { background: var(--sheet); }
+  .rounds { display: flex; align-items: flex-end; gap: 2px; height: 64px; }
+  .rounds i { flex: 1; max-width: 10px; min-height: 2px; border-radius: 2px 2px 0 0; background: var(--orange); opacity: .9; }
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+  .controls label.range { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--soft); }
+  .controls input[type=range] { width: 140px; accent-color: var(--orange); }
+  .caption p.err { color: #ffb3bf; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <a class="brand-logo" href="https://4front2market.se" target="_blank" rel="noopener" title="4Front 2 Market">
+        <svg viewBox="0 0 330 96" role="img" aria-label="4Front 2 Market" font-family="Poppins, 'Avenir Next', sans-serif">
+          <g fill="#F0A92D"><rect x="10" y="62" width="17" height="30" rx="5"/><rect x="37" y="50" width="17" height="42" rx="5"/><rect x="64" y="38" width="17" height="54" rx="5"/></g>
+          <path d="M 8 56 C 28 50, 50 40, 70 24" fill="none" stroke="#F0A92D" stroke-width="13" stroke-linecap="round"/>
+          <path d="M 85.6 12.1 L 80.4 31.5 L 65.6 12.5 Z" fill="#F0A92D" stroke="#F0A92D" stroke-width="5" stroke-linejoin="round"/>
+          <text x="112" y="44" font-size="42" font-weight="600" letter-spacing="-0.5" fill="#FFFFFF">4Front</text>
+          <text x="112" y="88" font-size="42" font-weight="600" letter-spacing="-0.5" fill="#5BC2C5">2Market</text>
+        </svg>
+      </a>
+      <span class="brand-sep" aria-hidden="true"></span>
+      <span class="brand-dot"></span>
+      <span class="brand-name">Beslutsmodeller spelar</span>
+      <div class="mode-switch" id="models" role="group" aria-label="Modell"></div>
+    </div>
+    <nav class="steps" id="games" aria-label="Spel"></nav>
+    <div class="top-actions">
+      <span class="run-pill teal" id="modelPill"><span class="pill-dot"></span><span>Modell</span></span>
+      <span class="run-pill" id="gpuPill"><span class="pill-dot"></span><span>Backend · söker</span></span>
+      <button type="button" class="btn" id="reset">Ny omgång</button>
+      <button type="button" class="btn" id="forget" hidden>Glöm allt</button>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="stage">
+      <div class="dash">
+        <div class="hero-card">
+          <div class="hero">
+            <div class="kicker" id="kicker">–</div>
+            <div class="big" id="score">0</div>
+            <div class="meta" id="meta"></div>
+          </div>
+          <button type="button" class="cta" id="toggle">Starta</button>
+        </div>
+        <div id="gGpu"></div>
+        <div id="gVram"></div>
+        <div id="gRate"></div>
+        <div id="gPower"></div>
+      </div>
+
+      <div class="board" id="board">
+        <canvas id="canvas" aria-label="Spelbrädet"></canvas>
+        <div class="caption"><h2 id="title">…</h2><p id="status"></p></div>
+      </div>
+
+      <div class="controls">
+        <button type="button" class="btn" id="step">Ett drag</button>
+        <label class="range">Paus mellan drag <input type="range" id="delay" min="0" max="500" step="10" value="60"> <span id="delayText"></span></label>
+        <span class="spacer"></span>
+        <label class="switch"><input type="checkbox" id="auto" checked><span class="track"><span class="knob"></span></span>Starta om automatiskt</label>
+      </div>
+    </section>
+
+    <aside class="side">
+      <details class="card explain" open>
+        <summary>Så läser du spelet</summary>
+        <ul id="howto"></ul>
+      </details>
+
+      <section class="card live-card">
+        <div class="card-row"><h3 class="card-title">Modellens val</h3><span class="spacer"></span><span class="live-dot"></span><span class="head-note" id="modelNote"></span></div>
+        <ul class="probs" id="probs"></ul>
+        <p class="foot">Modellens egen sannolikhet för varje drag. Det markerade är draget den valde.</p>
+      </section>
+
+      <section class="card">
+        <h3 class="card-title">Senaste draget</h3>
+        <div class="stats3">
+          <div><div class="stat-k">Drag</div><div class="stat-v" id="steps">0</div></div>
+          <div><div class="stat-k">ms / drag</div><div class="stat-v" id="ms">–</div></div>
+          <div><div class="stat-k">Tokens</div><div class="stat-v" id="tokens">–</div></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3 class="card-title">Tidigare omgångar</h3>
+        <div class="rounds" id="rounds"></div>
+        <p class="small muted" id="roundsNote"></p>
+        <p class="small" id="memory" style="color:var(--teal)"></p>
+      </section>
+    </aside>
+  </main>
+</div>
+
+<script src="gpu.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const canvas = $("canvas"), ctx = canvas.getContext("2d");
+let state = null, running = false, busy = false, timer = null, gpu = null;
+const usage = [];  // { computed, gpuMs } för de senaste dragen
+// Adressen slutar på #<spel>/<modell>. Saknas något väljer servern det förvalda.
+const fromAddress = () => location.hash.slice(1).split(/\/(.*)/).map(decodeURIComponent);
+let [current, model = ""] = fromAddress();
+
+const HOWTO = {
+  car: ["Bilen ska väja för mötande bilar på en trefilig väg.",
+    "Inför varje drag får modellen veta vad varje drag leder till och väljer <b>vänster, rakt fram eller höger</b>.",
+    "Poängen är antalet bilar den har kört förbi."],
+  learn: ["Samma väg, men modellen får <b>varken regler eller färdigtolkade drag</b> – bara vad den ser och vad som hände förra gången den var i exakt samma läge.",
+    "Varje krock sparas. Nästa gång samma läge dyker upp står krocken i beskrivningen.",
+    "En omgång slutar vid krock eller efter 300 drag (i mål). <b>Glöm allt</b> nollställer minnet."],
+  lake: ["Gå över sjön till <b>skatten</b> utan att gå genom isen. Vakarna syns inte men ligger på samma ställe varje omgång.",
+    "Modellen lär sig en karta: vakar (mörka), säker is (blå) och hur långt det verkar vara till skatten från varje ruta (siffran).",
+    "<b>Glöm allt</b> nollställer kartan."],
+  snake: ["Klassiskt Snake. Ormen ska äta äpplen utan att köra in i väggen eller sig själv.",
+    "Modellen får veta vad varje drag leder till och hur mycket fri yta som finns kvar efteråt."],
+};
+const MODEL_NAMES = { nimble: "Nimble", laya: "Laya" };
+const MODEL_PILLS = { nimble: "Nimble · Ollama", laya: "Laya · PyTorch" };
+
+function color(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+const sv = (value, digits = 0) => value.toLocaleString("sv-SE", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+const compact = value => (value >= 10000 ? sv(value / 1000, 0) + "k" : value >= 1000 ? sv(value / 1000, 1) + "k" : sv(Math.round(value)));
+
+function disc(x, y, size, fill, radius) {
+  ctx.fillStyle = fill;
+  ctx.beginPath();
+  ctx.arc((x + 0.5) * size, (y + 0.5) * size, size * radius, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function block(x, y, size, fill, insetX, insetY = insetX) {
+  ctx.fillStyle = fill;
+  ctx.beginPath();
+  ctx.roundRect(x * size + insetX, y * size + insetY, size - 2 * insetX, size - 2 * insetY, size * 0.18);
+  ctx.fill();
+}
+
+// Hur varje sorts ruta från spelets cells() ritas.
+const SHAPES = {
+  snake: (x, y, s) => block(x, y, s, color("--snake"), s * 0.06),
+  head: (x, y, s) => block(x, y, s, color("--head"), s * 0.06),
+  apple: (x, y, s) => disc(x, y, s, color("--apple"), 0.32),
+  safe: (x, y, s, label) => {                                      // is som modellen vet håller
+    block(x, y, s, color("--safe"), s * 0.06);
+    ctx.fillStyle = color("--label");
+    ctx.font = `500 ${s * 0.2}px Inter, sans-serif`;
+    ctx.fillText(label, (x + 0.13) * s, (y + 0.3) * s);            // inlärt antal steg till skatten
+  },
+  hole: (x, y, s) => disc(x, y, s, color("--hole"), 0.36),         // vak som modellen har hittat
+  goal: (x, y, s) => block(x, y, s, color("--gold"), s * 0.26),
+  player: (x, y, s) => disc(x, y, s, color("--player"), 0.26),
+  fell: (x, y, s) => disc(x, y, s, color("--apple"), 0.2),
+  car: (x, y, s, fill = color("--car"), windscreen = 0.2) => {
+    block(x, y, s, fill, s * 0.22, s * 0.08);
+    ctx.fillStyle = color("--glass");
+    ctx.fillRect((x + 0.3) * s, (y + windscreen) * s, s * 0.4, s * 0.16);
+  },
+  traffic: (x, y, s) => SHAPES.car(x, y, s, color("--traffic"), 0.64),  // mötande: vindrutan mot dig
+  crash: (x, y, s) => SHAPES.car(x, y, s, color("--apple")),
+};
+
+function draw() {
+  if (!state) return;
+  // Största rutstorlek som får plats på brädet.
+  const box = $("board"), wide = innerWidth > 1100;
+  const across = (box.clientWidth - 32) / state.cols;
+  const size = Math.max(12, Math.floor(wide ? Math.min(across, (box.clientHeight - 32) / state.rows) : Math.min(across, 56)));
+  const dpr = devicePixelRatio || 1;
+  canvas.style.width = size * state.cols + "px";
+  canvas.style.height = size * state.rows + "px";
+  canvas.width = size * state.cols * dpr;
+  canvas.height = size * state.rows * dpr;
+  const s = size * dpr;
+  for (let x = 0; x < state.cols; x++)
+    for (let y = 0; y < state.rows; y++) block(x, y, s, color("--cell"), s * 0.06);
+  for (const [x, y, kind, label] of state.cells) SHAPES[kind](x, y, s, label);
+}
+
+function pill(id, text) {
+  $(id).lastElementChild.textContent = text;
+}
+
+function render(next) {
+  if (!state || state.model !== next.model) {
+    model = next.model;
+    usage.length = 0;
+    $("models").innerHTML = next.models.map(name =>
+      `<button type="button" data-model="${name}" class="${name === model ? "on" : ""}">${MODEL_NAMES[name] || name}</button>`).join("");
+    pill("modelPill", MODEL_PILLS[model] || `${model} · Ollama`);
+    $("modelNote").textContent = MODEL_NAMES[model] || model;
+  }
+  history.replaceState(null, "", `#${next.id}/${encodeURIComponent(next.model)}`);
+  if (!state || state.id !== next.id) {
+    current = next.id;
+    document.title = `${next.title} – spelat av grafikkortet`;
+    $("title").textContent = next.title;
+    $("games").innerHTML = next.games.map(([id, title], i) =>
+      `<button type="button" class="step${id === current ? " on" : ""}" data-game="${id}"><span class="num">0${i + 1}</span>${title}</button>`).join("")
+      + `<a class="step" href="/race"><span class="num">0${next.games.length + 1}</span>Racet – 100 bilar →</a>`;
+    $("howto").innerHTML = (HOWTO[next.id] || []).map(text => `<li>${text}</li>`).join("");
+    $("probs").innerHTML = Object.entries(next.moves).map(([move, label]) =>
+      `<li data-move="${move}"><span>${label}</span><span class="pb"><i></i></span><span class="pv">–</span></li>`).join("");
+  }
+  const fresh = next.last && (!state || next.steps !== state.steps || next.id !== state.id);
+  state = next;
+  if (fresh && state.last.usage) {
+    usage.push({ computed: state.last.usage.computed, gpuMs: state.last.usage.gpu_ms });
+    if (usage.length > 20) usage.shift();
+  }
+  $("kicker").textContent = `${state.unit} · bästa ${state.best}`;
+  $("score").innerHTML = `${state.score}<span class="unit">${state.won ? "i mål" : ""}</span>`;
+  $("meta").textContent = state.last ? `drag ${state.steps} · ${state.last.ms} ms per drag` : "väntar på första draget";
+  $("steps").textContent = state.steps;
+  $("ms").textContent = state.last ? state.last.ms : "–";
+  $("tokens").textContent = state.last && state.last.usage ? state.last.usage.tokens : "–";
+  const top = Math.max(1, ...state.rounds);
+  $("rounds").innerHTML = state.rounds.map(score => `<i style="height:${score / top * 100}%" title="${score} ${state.unit}"></i>`).join("");
+  $("roundsNote").textContent = state.rounds.length ? `Senaste omgången: ${state.rounds.at(-1)} ${state.unit}` : "Ingen omgång avslutad än.";
+  $("memory").textContent = state.memory || "";
+  $("forget").hidden = !state.memory;
+  for (const row of $("probs").children) {
+    const p = state.last ? state.last.probs[row.dataset.move] : null;
+    row.classList.toggle("win", !!state.last && state.last.move === row.dataset.move);
+    row.querySelector("i").style.width = p === null ? "0" : (p * 100).toFixed(1) + "%";
+    row.querySelector(".pv").textContent = p === null ? "–" : Math.round(p * 100) + "%";
+  }
+  const statusText = state.error ? state.error
+    : !state.alive ? `${state.won ? "I mål! " : "Game over: "}${state.reason} · ${state.score} ${state.unit}`
+    : running ? `${MODEL_NAMES[model] || model} spelar …` : "Tryck Starta så spelar modellen.";
+  $("status").textContent = statusText;
+  $("status").classList.toggle("err", !!state.error);
+  draw();
+}
+
+async function call(action, method = "POST") {
+  const response = await fetch(`/api/${current || "default"}/${action}?model=${encodeURIComponent(model)}`, { method });
+  return response.json();
+}
+
+async function switchTo(game, newModel) {
+  setRunning(false);
+  while (busy) await new Promise(done => setTimeout(done, 30));  // låt pågående drag bli klart
+  current = game;
+  model = newModel;
+  render(await call("state", "GET"));
+}
+
+function setRunning(on) {
+  running = on;
+  clearTimeout(timer);
+  $("toggle").textContent = on ? "Pausa" : "Starta";
+  if (state) render(state);
+  if (on) tick();
+}
+
+async function tick() {
+  if (busy) return;
+  busy = true;
+  let wait = +$("delay").value;
+  try {
+    if (!state) render(await call("state", "GET"));
+    if (!state.alive) render(await call("reset"));
+    render(await call("step"));
+    if (state.error) setRunning(false);
+    else if (!state.alive) {
+      if ($("auto").checked) wait = 1500; else setRunning(false);
+    }
+  } catch {
+    $("status").textContent = "Tappade kontakten med spelet – kör play.py fortfarande?";
+    $("status").classList.add("err");
+    setRunning(false);
+  }
+  busy = false;
+  if (running) timer = setTimeout(tick, wait);
+}
+
+// Grafikkortets instrument, en gång per sekund.
+addEventListener("gpustatus", event => { gpu = event.detail; });
+setInterval(() => {
+  const ok = gpu && !gpu.error, gb = mib => sv(mib / 1024, 1);
+  const computed = usage.reduce((s, u) => s + u.computed, 0), gpuMs = usage.reduce((s, u) => s + u.gpuMs, 0);
+  const rate = gpuMs ? computed / gpuMs * 1000 : null;
+  Gauges.render($("gGpu"), { value: ok ? gpu.util : null, max: 100, unit: "%", label: "GPU-belastning",
+    sub: ok ? (gpu.temperature == null ? gpu.name : `${gpu.temperature} °C`) : "ingen kontakt", tone: color("--teal") });
+  Gauges.render($("gVram"), { value: ok ? gpu.memoryUsed : null, max: ok ? gpu.memoryTotal : 1,
+    text: ok ? gb(gpu.memoryUsed) : "–", unit: "GB", label: "Grafikminne", sub: ok ? `av ${gb(gpu.memoryTotal)} GB` : "", tone: color("--purple") });
+  Gauges.render($("gRate"), { value: rate, max: 10000, text: rate == null ? "–" : compact(rate), label: "Tokens/s",
+    sub: usage.length ? `senaste ${usage.length} dragen` : "inga drag än", tone: color("--orange") });
+  Gauges.render($("gPower"), { value: ok ? gpu.power : null, max: ok ? gpu.powerLimit : 1, unit: "W", label: "Effekt",
+    sub: ok && gpu.powerLimit ? `av ${sv(gpu.powerLimit)} W` : "", tone: color("--red") });
+  pill("gpuPill", ok ? "Backend · " + gpu.name.replace(/^NVIDIA\s+(GeForce\s+)?/i, "") : "Backend · okänd");
+}, 1000);
+
+$("toggle").onclick = () => setRunning(!running);
+$("step").onclick = () => { setRunning(false); tick(); };
+$("reset").onclick = async () => { setRunning(false); render(await call("reset")); };
+$("forget").onclick = async () => { setRunning(false); render(await call("forget")); };
+$("games").onclick = event => {
+  const button = event.target.closest("button[data-game]");
+  if (button) switchTo(button.dataset.game, model);
+};
+$("models").onclick = event => {
+  const button = event.target.closest("button[data-model]");
+  if (button) switchTo(current, button.dataset.model);
+};
+$("delay").oninput = () => { $("delayText").textContent = $("delay").value + " ms"; };
+$("delay").oninput();
+addEventListener("resize", draw);
+addEventListener("hashchange", () => { const [game, newModel = ""] = fromAddress(); switchTo(game, newModel); });
+call("state", "GET").then(render);
+</script>
+</body>
+</html>
