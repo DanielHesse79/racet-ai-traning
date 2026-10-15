@@ -1,8 +1,13 @@
-# Beslutsmodeller spelar
+# Racet – AI-träning man kan se
 
-Spel där varje drag är ett beslut av en beslutsmodell på grafikkortet: **Nimble** via
-Ollama eller **Laya** direkt i PyTorch. Designen följer Laya Training Visualization Tool
-(4Front 2 Market): mörk ram, ljus spelyta, instrument för grafikkortet.
+Bilar som lär sig köra. En liten språkmodell, **all-MiniLM-L6-v2** (eller **Laya**), läser
+vad varje bil ser som text och väljer manöver, och tränas på grafikkortet mellan
+generationerna. Ett pedagogiskt exempel på hur man tränar en modell i praktiken: best
+practice, krascher som straff, temperatur, och tre banor som visar om modellen har lärt sig
+köra eller bara memorerat. Designen följer Laya Training Visualization Tool (4Front 2 Market):
+mörk ram, ljus spelyta, instrument för grafikkortet.
+
+Repot har också fyra turbaserade spel där en beslutsmodell gör varje drag – se *Spelen*.
 
 ```bash
 python play.py
