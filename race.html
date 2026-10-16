@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="sv">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Racet – 100 bilar</title>
+<title>The Race – 100 cars</title>
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -66,17 +66,17 @@
       </a>
       <span class="brand-sep" aria-hidden="true"></span>
       <span class="brand-dot"></span>
-      <span class="brand-name" id="brandName">Racet · 100 bilar</span>
-      <div class="mode-switch" id="mode" role="group" aria-label="Modell">
-        <button type="button" data-mode="minibert" title="En väldigt liten BERT, 22 miljoner parametrar, som tränas från noll">all-MiniLM-L6-v2</button>
-        <button type="button" data-mode="laya" title="Laya på grafikkortet – tränas mellan generationerna">Laya</button>
+      <span class="brand-name" id="brandName">The Race · 100 cars</span>
+      <div class="mode-switch" id="mode" role="group" aria-label="Model">
+        <button type="button" data-mode="minibert" title="A very small BERT, 22 million parameters, trained from scratch">all-MiniLM-L6-v2</button>
+        <button type="button" data-mode="laya" title="Laya on the GPU – trained between generations">Laya</button>
       </div>
     </div>
     <span class="spacer"></span>
     <div class="top-actions">
       <span class="run-pill teal" id="modelPill"><span class="pill-dot"></span><span>Laya · laddar</span></span>
-      <span class="run-pill" id="gpuPill"><span class="pill-dot"></span><span>Backend · söker</span></span>
-      <button type="button" class="btn" id="restart">Börja om</button>
+      <span class="run-pill" id="gpuPill"><span class="pill-dot"></span><span>Backend · searching</span></span>
+      <button type="button" class="btn" id="restart">Restart</button>
     </div>
   </header>
 
@@ -93,19 +93,19 @@
         <div id="gGpu"></div>
         <div id="gRate"></div>
         <div class="curve-card">
-          <div class="card-row"><h3 class="card-title">Inlärningskurva</h3><span class="spacer"></span><div class="chart-legend" id="chartKeys"></div></div>
+          <div class="card-row"><h3 class="card-title">Learning curve</h3><span class="spacer"></span><div class="chart-legend" id="chartKeys"></div></div>
           <canvas class="chart" id="chart"></canvas>
           <div class="gen-stats">
             <div><div class="stat-k">Generation</div><div class="stat-v" id="sGen">1</div></div>
-            <div><div class="stat-k">På banan</div><div class="stat-v" id="sAlive">100</div></div>
-            <div><div class="stat-k">Tränad</div><div class="stat-v" id="sTrained">–</div></div>
-            <div title="Hur långt provbilen kom förra generationen – helt på egen hand, utan best practice"><div class="stat-k">Bara modellen</div><div class="stat-v" id="sSolo">–</div></div>
+            <div><div class="stat-k">On track</div><div class="stat-v" id="sAlive">100</div></div>
+            <div><div class="stat-k">Trained</div><div class="stat-v" id="sTrained">–</div></div>
+            <div title="How far the test car got last generation – entirely on its own, without best practice"><div class="stat-k">Model alone</div><div class="stat-v" id="sSolo">–</div></div>
           </div>
         </div>
       </div>
 
       <div class="board" id="board">
-        <canvas id="race" aria-label="Banan med 100 bilar"></canvas>
+        <canvas id="race" aria-label="The track with 100 cars"></canvas>
         <div class="caption"><h2 id="capTitle">Generation 1</h2><p id="capText"></p></div>
         <div class="toast" id="toast" role="status"></div>
       </div>
@@ -113,54 +113,54 @@
       <div class="legend">
         <span id="legend" class="legend"></span>
         <span class="spacer"></span>
-        <label class="switch"><input type="checkbox" id="sensors" checked><span class="track"><span class="knob"></span></span>Sensorer</label>
-        <label class="switch"><input type="checkbox" id="crashMarks" checked><span class="track"><span class="knob"></span></span>Krascher</label>
+        <label class="switch"><input type="checkbox" id="sensors" checked><span class="track"><span class="knob"></span></span>Sensors</label>
+        <label class="switch"><input type="checkbox" id="crashMarks" checked><span class="track"><span class="knob"></span></span>Crashes</label>
       </div>
     </section>
 
     <aside class="side">
       <section class="card">
-        <h3 class="card-title">Styrning</h3>
+        <h3 class="card-title">Controls</h3>
         <div class="transport">
-          <button type="button" class="tbtn" id="play"><svg viewBox="0 0 12 12"><path d="M2 1l9 5-9 5z"/></svg>Spela</button>
-          <button type="button" class="tbtn" id="pause"><svg viewBox="0 0 12 12"><path d="M2 1h3v10H2zM7 1h3v10H7z"/></svg>Pausa</button>
+          <button type="button" class="tbtn" id="play"><svg viewBox="0 0 12 12"><path d="M2 1l9 5-9 5z"/></svg>Play</button>
+          <button type="button" class="tbtn" id="pause"><svg viewBox="0 0 12 12"><path d="M2 1h3v10H2zM7 1h3v10H7z"/></svg>Pause</button>
         </div>
-        <div class="speed-label"><span class="stat-k">Fart</span><span class="stat-k"><kbd>mellanslag</kbd> spela / pausa</span></div>
-        <div class="speeds" id="speed" role="group" aria-label="Fart">
+        <div class="speed-label"><span class="stat-k">Speed</span><span class="stat-k"><kbd>space</kbd> play / pause</span></div>
+        <div class="speeds" id="speed" role="group" aria-label="Speed">
           <button type="button" data-speed="1" class="on">1×</button>
           <button type="button" data-speed="4">4×</button>
           <button type="button" data-speed="16">16×</button>
           <button type="button" data-speed="64">64×</button>
         </div>
-        <div class="speed-label"><span class="stat-k">Antal bilar</span><span class="stat-k" id="speedNote"></span></div>
-        <div class="speeds" id="population" role="group" aria-label="Antal bilar">
+        <div class="speed-label"><span class="stat-k">Cars</span><span class="stat-k" id="speedNote"></span></div>
+        <div class="speeds" id="population" role="group" aria-label="Cars">
           <button type="button" data-n="10">10</button>
           <button type="button" data-n="100" class="on">100</button>
-          <button type="button" data-n="1000">1 000</button>
-          <button type="button" data-n="10000">10 000</button>
+          <button type="button" data-n="1000">1,000</button>
+          <button type="button" data-n="10000">10,000</button>
         </div>
-        <div class="speed-label"><span class="stat-k">Bana</span><span class="stat-k">lärt sig eller memorerat?</span></div>
-        <div class="speeds tracks" id="trackPick" role="group" aria-label="Bana">
-          <button type="button" data-track="0" title="Banan modellen tränas på från början">Träning</button>
-          <button type="button" data-track="1" title="Samma bana spegelvänd: vänsterkurvor blir högerkurvor">Spegelvänd</button>
-          <button type="button" data-track="2" title="En bana modellen aldrig har sett">Ny bana</button>
+        <div class="speed-label"><span class="stat-k">Track</span><span class="stat-k">learned or memorized?</span></div>
+        <div class="speeds tracks" id="trackPick" role="group" aria-label="Track">
+          <button type="button" data-track="0" title="The track the model is trained on from the start">Training</button>
+          <button type="button" data-track="1" title="The same track mirrored: left turns become right turns">Mirrored</button>
+          <button type="button" data-track="2" title="A track the model has never seen">New track</button>
         </div>
       </section>
 
       <section class="card">
-        <h3 class="card-title" id="leadersTitle">Ledare · generation 1</h3>
+        <h3 class="card-title" id="leadersTitle">Leaders · generation 1</h3>
         <ol class="rank" id="leaders"></ol>
       </section>
 
       <section class="card live-card">
-        <div class="card-row"><h3 class="card-title" id="readsTitle">Vad Laya ser</h3><span class="spacer"></span><span class="live-dot"></span><span class="head-note" id="readsNote">grafikkortet</span></div>
+        <div class="card-row"><h3 class="card-title" id="readsTitle">What Laya sees</h3><span class="spacer"></span><span class="live-dot"></span><span class="head-note" id="readsNote">the GPU</span></div>
         <p class="reads" id="reads">–</p>
         <ul class="probs" id="choices"></ul>
-        <p class="foot">Det provbilen ser just nu, och hur säker modellen är på varje manöver. Provbilen väljer alltid den översta.</p>
+        <p class="foot">What the test car sees right now, and how sure the model is of each maneuver. The test car always picks the top one.</p>
       </section>
 
       <section class="card">
-        <h3 class="card-title">Nya best practice</h3>
+        <h3 class="card-title">New best practice</h3>
         <ol class="events" id="log"></ol>
       </section>
     </aside>
@@ -181,12 +181,12 @@ const MAX_SPEED = 6, ACCEL = 0.12, DRAG = 0.99, TURN = 0.07;
 
 // Manövrerna, i samma ordning som OPTIONS i race_text.py.
 const ACTIONS = [
-  { name: "sharp left", label: "skarpt vänster", steer: -1, throttle: -0.6 },
-  { name: "left", label: "vänster", steer: -0.5, throttle: 0.3 },
-  { name: "straight", label: "rakt, gasa", steer: 0, throttle: 1 },
-  { name: "right", label: "höger", steer: 0.5, throttle: 0.3 },
-  { name: "sharp right", label: "skarpt höger", steer: 1, throttle: -0.6 },
-  { name: "brake", label: "rakt, bromsa", steer: 0, throttle: -1 },
+  { name: "sharp left", label: "sharp left", steer: -1, throttle: -0.6 },
+  { name: "left", label: "left", steer: -0.5, throttle: 0.3 },
+  { name: "straight", label: "straight, accelerate", steer: 0, throttle: 1 },
+  { name: "right", label: "right", steer: 0.5, throttle: 0.3 },
+  { name: "sharp right", label: "sharp right", steer: 1, throttle: -0.6 },
+  { name: "brake", label: "straight, brake", steer: 0, throttle: -1 },
 ];
 const DECIDE_EVERY = 3;                 // modellen väljer manöver var tredje steg, 20 gånger i sekunden
 const LOOKAHEAD = 8;                    // ett beslut bedöms efter vad som hände de närmaste åtta besluten
@@ -214,9 +214,9 @@ const CONTROL = [
 // Banorna. Läget modellen läser (fart, kurva framåt, avstånd till kanten) är detsamma på alla banor,
 // så det modellen lär sig på en bana kan den använda på en annan – om den lärt sig köra och inte bara memorerat.
 const TRACKS = [
-  { id: "trana", name: "Träningsbanan", control: CONTROL },
-  { id: "spegel", name: "Spegelvänd", control: CONTROL.map(([x, y]) => [WORLD_W - x, y]) },
-  { id: "ny", name: "Ny bana", control: [
+  { id: "trana", name: "Training track", control: CONTROL },
+  { id: "spegel", name: "Mirrored", control: CONTROL.map(([x, y]) => [WORLD_W - x, y]) },
+  { id: "ny", name: "New track", control: [
     [150, 560], [400, 565], [600, 555], [800, 560], [900, 530], [940, 460], [930, 380], [870, 330], [780, 330],
     [720, 280], [760, 210], [880, 180], [930, 110], [870, 60], [740, 60], [640, 100], [560, 170], [470, 180],
     [420, 110], [330, 70], [220, 80], [140, 140], [180, 220], [300, 250], [340, 330], [280, 400], [150, 400],
@@ -576,8 +576,8 @@ let track = trackOf(trackIndex);
 // (421M parametrar), och all-MiniLM-L6-v2, en väldigt liten BERT (22M) som börjar från noll.
 // Bara den valda ligger på grafikkortet; byter man modell släpper servern den andra.
 const MODELS = {
-  laya: { name: "Laya", trains: true, where: "grafikkortet", tokenScale: 60000 },
-  minibert: { name: "all-MiniLM-L6-v2", trains: true, where: "grafikkortet", tokenScale: 400000 },
+  laya: { name: "Laya", trains: true, where: "the GPU", tokenScale: 60000 },
+  minibert: { name: "all-MiniLM-L6-v2", trains: true, where: "the GPU", tokenScale: 400000 },
 };
 const POPULATIONS = [10, 100, 1000, 10000];
 let population = 100;
@@ -616,13 +616,13 @@ function color(name) {
   return (colors[name] ??= getComputedStyle(document.documentElement).getPropertyValue(name).trim());
 }
 
-const sv = (value, digits = 0) => value.toLocaleString("sv-SE", { minimumFractionDigits: digits, maximumFractionDigits: digits });
-const number = value => sv(Math.round(value));
-const seconds = steps => sv(steps / 60, 1) + " s";
-const percent = value => Math.round(value * 100) + " %";
-const percent2 = value => sv(value * 100, 2) + " %";
-const result = bp => (bp.time ? `varvtid ${seconds(bp.time)}` : `${percent2(bp.share)} av banan`);
-const compact = value => (value >= 10000 ? sv(value / 1000, 0) + "k" : value >= 1000 ? sv(value / 1000, 1) + "k" : number(value));
+const fmt = (value, digits = 0) => value.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+const number = value => fmt(Math.round(value));
+const seconds = steps => fmt(steps / 60, 1) + " s";
+const percent = value => Math.round(value * 100) + "%";
+const percent2 = value => fmt(value * 100, 2) + "%";
+const result = bp => (bp.time ? `lap time ${seconds(bp.time)}` : `${percent2(bp.share)} of the track`);
+const compact = value => (value >= 10000 ? fmt(value / 1000, 0) + "k" : value >= 1000 ? fmt(value / 1000, 1) + "k" : number(value));
 const sleep = ms => new Promise(done => setTimeout(done, ms));
 const isStar = car => car.role === "ghost";
 const name = () => MODELS[mode].name;
@@ -642,10 +642,10 @@ function sideColor(car) {  // samma roll, ljusare ton för den mörka sidopanele
 
 function improvement(event) {
   const before = event.previous;
-  if (!before) return "första best practice";
-  if (event.time && before.time) return `${seconds(before.time - event.time)} snabbare än #${before.id}`;
-  if (event.time) return `första bilen runt hela varvet – #${before.id} kom ${percent2(before.share)}`;
-  return `+${sv((event.share - before.share) * 100, 2)} procentenheter mot #${before.id}`;
+  if (!before) return "first best practice";
+  if (event.time && before.time) return `${seconds(before.time - event.time)} faster than #${before.id}`;
+  if (event.time) return `first car around the whole lap – #${before.id} reached ${percent2(before.share)}`;
+  return `+${fmt((event.share - before.share) * 100, 2)} percentage points over #${before.id}`;
 }
 
 // ---- Sparat mellan besök (bara i den här webbläsaren), ett race per modell och bana
@@ -703,13 +703,13 @@ function fail(id, message) {
 async function connect(id) {
   const driver = drivers[id], button = $("mode").querySelector(`[data-mode="${id}"]`);
   if (!served) {
-    driver.error = `${MODELS[id].name} kräver att racet öppnas via play.py.`;
+    driver.error = `${MODELS[id].name} needs the race to be opened through play.py.`;
     button.disabled = true;
     if (id === mode) status(driver.error);
     return;
   }
   driver.busy = "load";
-  if (id === mode) status(`Laddar ${MODELS[id].name} … ${id === "laya" ? "första gången tar det runt 20 sekunder." : ""}`);
+  if (id === mode) status(`Loading ${MODELS[id].name} … ${id === "laya" ? "the first time takes about 20 seconds." : ""}`);
   for (;;) {
     if (id !== mode) {  // användaren bytte modell: servern ska bara ladda den valda
       driver.busy = null;
@@ -719,12 +719,12 @@ async function connect(id) {
     try {
       answer = await (await fetch(`/api/race/status?model=${id}`)).json();
     } catch {
-      answer = { error: "Ingen kontakt med play.py." };
+      answer = { error: "No contact with play.py." };
     }
     if (answer.error) { driver.error = answer.error; break; }
     if (answer.ready) {
       if (answer.options.join() !== ACTIONS.map(a => a.name).join()) {
-        driver.error = "race.html och race_text.py har olika manövrer.";
+        driver.error = "race.html and race_text.py have different maneuvers.";
         break;
       }
       Object.assign(driver, { ready: true, vocabulary: answer, version: answer.version, updates: answer.updates });
@@ -762,16 +762,16 @@ async function finishGeneration(id) {
   const { samples, best, decisions } = generationResults(race);
   showEvents(id);
   try {
-    let note = `${MODELS[id].name} tränas inte – nästa generation bygger på best practice.`;
+    let note = `${MODELS[id].name} is not trained – the next generation builds on best practice.`;
     if (MODELS[id].trains) {
-      status(`Generation ${race.gen} klar. ${MODELS[id].name} tränar på ${MODELS[id].where} på ${number(decisions)} egna val i ` +
-        `${number(samples.length)} olika lägen …`);
+      status(`Generation ${race.gen} done. ${MODELS[id].name} is training on ${MODELS[id].where} on ${number(decisions)} of ` +
+        `the cars' own decisions in ${number(samples.length)} different situations …`);
       const answer = await post("/api/race/learn", id, { samples, best });
       driver.policy.clear();  // svaren från före träningen gäller inte längre …
       answer.keys.forEach((key, i) => driver.policy.set(keyCode(key), answer.probs[i]));  // … men de nya kom med
       Object.assign(driver, { version: answer.version, updates: answer.updates });
       logUsage(answer.usage);
-      note = `${MODELS[id].name} tränades på ${sv(answer.usage.gpu_ms / 1000, 1)} s.`;
+      note = `${MODELS[id].name} trained in ${fmt(answer.usage.gpu_ms / 1000, 1)} s.`;
     }
     if (race.discarded) {  // racet startades om under tiden
       driver.busy = null;
@@ -795,16 +795,16 @@ async function finishGeneration(id) {
 function forkText(id) {
   const race = races[id];
   if (!race.bestPractice && drivers[id].updates > 0) {
-    return `${TRACKS[race.trackIndex].name}: ${MODELS[id].name} har inte kört här förut och det finns ingen best practice. ` +
-      `Provbilen (temperatur 0) visar vad modellen har lärt sig – bra om den kan köra, dåligt om den bara memorerat.`;
+    return `${TRACKS[race.trackIndex].name}: ${MODELS[id].name} has not driven here before and there is no best practice. ` +
+      `The test car (temperature 0) shows what the model has learned – well if it can drive, badly if it only memorized.`;
   }
-  if (!race.bestPractice) return `Del 1, första generationen: alla bilar väljer själva med ${MODELS[id].name}.`;
+  if (!race.bestPractice) return `Part 1, first generation: every car chooses for itself with ${MODELS[id].name}.`;
   if (race.bestPractice.time) {
-    return `Del 2, kapa tiden: varje bil kör rekordvarvet till sin egen punkt (lila prick) och provar en ny linje ` +
-      `därifrån – ${race.cars.filter(car => car.branch).length} olika ställen längs banan. Några kraschar på vägen.`;
+    return `Part 2, cut the time: each car drives the record lap up to its own point (purple dot) and tries a new line ` +
+      `from there – ${race.cars.filter(car => car.branch).length} different places along the track. Some crash on the way.`;
   }
-  return `Del 1, runt banan: alla ${number(race.cars.length)} kör som best practice till ${percent2(branchShare(race))} – där väljer ` +
-    `${MODELS[id].name} och bilarna gör lite olika val.`;
+  return `Part 1, around the track: all ${number(race.cars.length)} drive like best practice up to ${percent2(branchShare(race))} – ` +
+    `there ${MODELS[id].name} takes over and the cars make slightly different choices.`;
 }
 
 // ---- Simuleringen per bildruta
@@ -1067,21 +1067,21 @@ function draw() {
 
 // ---- Instrumenten och panelerna
 function split(text) {
-  // "48,78 %" -> heltal, decimaler och enhet var för sig, som det stora talet i verktyget.
-  const match = text.match(/^(-?\d[\d\s]*)(,\d+)?\s*(.*)$/);
+  // "48.78%" -> heltal, decimaler och enhet var för sig, som det stora talet i verktyget.
+  const match = text.match(/^(-?\d[\d,]*)(\.\d+)?\s*(.*)$/);
   return match ? [match[1], match[2] || "", match[3]] : [text, "", ""];
 }
 
 function trainedText(id) {
   const driver = drivers[id];
-  if (!MODELS[id].trains) return "fasta vikter";
-  return driver.ready ? `${number(driver.updates)} ggr` : "–";
+  if (!MODELS[id].trains) return "fixed weights";
+  return driver.ready ? `${number(driver.updates)}×` : "–";
 }
 
 function updatePills() {
   const driver = drivers[mode], model = MODELS[mode];
-  if (!driver.ready) pill("modelPill", `${model.name} · ${driver.error ? "ej tillgänglig" : "laddar"}`);
-  else pill("modelPill", model.trains ? `${model.name} · tränad ${number(driver.updates)} ggr` : `${model.name} · fasta vikter`);
+  if (!driver.ready) pill("modelPill", `${model.name} · ${driver.error ? "not available" : "loading"}`);
+  else pill("modelPill", model.trains ? `${model.name} · trained ${number(driver.updates)}×` : `${model.name} · fixed weights`);
 }
 
 function updatePanels() {
@@ -1089,24 +1089,24 @@ function updatePanels() {
   if (bp) {
     const [whole, dec, unit] = split(bp.time ? seconds(bp.time) : percent2(bp.share));
     $("record").innerHTML = `${whole}<span class="dec">${dec}</span><span class="unit">${unit}</span>`;
-    $("kicker").textContent = `${bp.time ? "Varvtid" : "Andel av banan"} · best practice #${bp.id} · gen ${bp.gen}`;
+    $("kicker").textContent = `${bp.time ? "Lap time" : "Share of the track"} · best practice #${bp.id} · gen ${bp.gen}`;
   } else {
-    $("record").innerHTML = `0<span class="dec">,00</span><span class="unit">%</span>`;
-    $("kicker").textContent = "Best practice · ingen än";
+    $("record").innerHTML = `0<span class="dec">.00</span><span class="unit">%</span>`;
+    $("kicker").textContent = "Best practice · none yet";
   }
-  $("meta").textContent = !bp ? "Del 1 · runt banan · alla väljer själva"
-    : bp.time ? `Del 2 · kapa tiden · ${race.cars.filter(car => car.branch).length} bilar provar nya linjer längs varvet`
-    : `Del 1 · runt banan · följer best practice till ${percent2(branchShare(race))}`;
+  $("meta").textContent = !bp ? "Part 1 · around the track · every car chooses itself"
+    : bp.time ? `Part 2 · cut the time · ${race.cars.filter(car => car.branch).length} cars try new lines along the lap`
+    : `Part 1 · around the track · following best practice up to ${percent2(branchShare(race))}`;
   $("capTitle").textContent = `Generation ${race.gen} · ${name()} · ${TRACKS[race.trackIndex].name}`;
   const last = race.history.at(-1);
   $("sSolo").textContent = !last || last.solo == null ? "–" : last.soloTime ? seconds(last.soloTime) : percent2(last.solo);
   $("sGen").textContent = race.gen;
   $("sAlive").textContent = cars.filter(car => car.alive && !car.finished).length;
   $("sTrained").textContent = trainedText(mode);
-  $("leadersTitle").textContent = `Ledare · generation ${race.gen}`;
+  $("leadersTitle").textContent = `Leaders · generation ${race.gen}`;
   const top = [...cars].sort((a, b) => fitness(b) - fitness(a)).slice(0, 5);
   $("leaders").innerHTML = top.map((car, i) => {
-    const value = car.finished ? split(seconds(car.finishStep)) : split(sv(share(car, track) * 100, 1) + " %");
+    const value = car.finished ? split(seconds(car.finishStep)) : split(fmt(share(car, track) * 100, 1) + "%");
     return `<li class="rank-row${isStar(car) ? " active" : ""}" style="--tone:${sideColor(car)}">
       <span class="rank-n">${i + 1}</span>
       <div><div class="rank-name">#${car.id}</div><div class="rank-sub">${leaderLabel(car, race)}</div></div>
@@ -1117,19 +1117,19 @@ function updatePanels() {
 }
 
 function leaderLabel(car, race) {
-  if (car.role === "ghost") return `★ best practice · från gen ${car.born}`;
+  if (car.role === "ghost") return `★ best practice · from gen ${car.born}`;
   const bp = race.bestPractice;
-  const first = !car.branch || !bp ? "" : bp.time ? ` · egen linje från ${percent(branchShare(race, bp, car.branch))}`
-    : car.finished ? "" : " · följde best practice först";
-  if (car.role === "greedy") return "provbilen · temperatur 0 · bara modellen";
+  const first = !car.branch || !bp ? "" : bp.time ? ` · own line from ${percent(branchShare(race, bp, car.branch))}`
+    : car.finished ? "" : " · followed best practice first";
+  if (car.role === "greedy") return "test car · temperature 0 · model alone";
   return `${daring(car)}${first}`;
 }
 
 // Hur mycket en bil chansar, det vill säga dess temperatur: 0 tar alltid det modellen tror mest på,
 // högre väljer oftare något annat.
 function daring(car, past = false) {
-  const word = car.temperature < 0.47 ? "lite" : car.temperature < 0.73 ? "en del" : "mycket";
-  return `${past ? "chansade" : "chansar"} ${word} · temperatur ${sv(car.temperature, 1)}`;
+  const word = car.temperature < 0.47 ? "a little" : car.temperature < 0.73 ? "some" : "a lot";
+  return `${past ? "explored" : "explores"} ${word} · temperature ${fmt(car.temperature, 1)}`;
 }
 
 function sizeSmall(c, height) {
@@ -1158,7 +1158,7 @@ function drawChart() {
     g.fillText(Math.round(level * 100) + "%", 0, y + 3);
   }
   if (history.length < 2) {
-    g.fillText("KURVAN VÄXER EFTER NÅGRA GENERATIONER", left + 4, (top + bottom) / 2);
+    g.fillText("THE CURVE GROWS AFTER A FEW GENERATIONS", left + 4, (top + bottom) / 2);
     return;
   }
   g.fillText("GEN " + history[0].gen, left, height - 2);
@@ -1191,8 +1191,8 @@ function drawReads() {
   const race = races[mode], driver = drivers[mode], greedy = race.cars.find(car => car.role === "greedy");
   const probs = greedy && greedy.code != null && !follows(greedy) && driver.policy.get(greedy.code);
   if (!driver.vocabulary || !probs) {
-    $("reads").textContent = !driver.ready ? (driver.error || `${name()} laddas …`)
-      : "Väntar på nästa beslut …";
+    $("reads").textContent = !driver.ready ? (driver.error || `${name()} is loading …`)
+      : "Waiting for the next decision …";
     $("choices").innerHTML = "";
     return;
   }
@@ -1207,14 +1207,14 @@ function renderLog(id) {
   if (!events.length) {
     const saved = race.bestPractice;
     $("log").innerHTML = saved
-      ? `<li><span class="gen">Sparad</span><span><b>#${saved.id}</b> – ${result(saved)}.
-          <em>Fortsätter från förra gången. Börja om för att lära från noll.</em></span></li>`
-      : '<li class="empty">Ingen än – första generationen kör.</li>';
+      ? `<li><span class="gen">Saved</span><span><b>#${saved.id}</b> – ${result(saved)}.
+          <em>Continuing from last time. Restart to learn from scratch.</em></span></li>`
+      : '<li class="empty">None yet – the first generation is driving.</li>';
     return;
   }
   $("log").innerHTML = events.map(event => {
-    const who = event.role === "explorer" ? ` (${daring(event, true)})` : event.role === "greedy" ? " (provbilen, temperatur 0)" : "";
-    const fork = event.branchShare ? ` Följde best practice till ${percent2(event.branchShare)}.` : "";
+    const who = event.role === "explorer" ? ` (${daring(event, true)})` : event.role === "greedy" ? " (test car, temperature 0)" : "";
+    const fork = event.branchShare ? ` Followed best practice up to ${percent2(event.branchShare)}.` : "";
     return `<li><span class="gen">Gen ${event.gen}</span>
       <span><b>#${event.id}</b>${who} – ${result(event)}.<em>${improvement(event)}.${fork}</em></span></li>`;
   }).join("");
@@ -1229,9 +1229,9 @@ function toast(html, ms) {
 
 function showFirstTry(id, race) {
   const last = race.history.at(-1);
-  const got = last.soloTime ? `runt hela banan på ${seconds(last.soloTime)}` : `${percent2(last.solo)} av banan`;
-  toast(`<b>Provbilen på ${TRACKS[race.trackIndex].name}, första försöket: ${got}</b>` +
-    `<small>Helt på egen hand – det här är vad ${MODELS[id].name} har lärt sig, inte memorerat</small>`, 6000);
+  const got = last.soloTime ? `around the whole track in ${seconds(last.soloTime)}` : `${percent2(last.solo)} of the track`;
+  toast(`<b>Test car on ${TRACKS[race.trackIndex].name}, first try: ${got}</b>` +
+    `<small>Entirely on its own – this is what ${MODELS[id].name} has learned, not memorized</small>`, 6000);
 }
 
 function showEvents(id) {
@@ -1241,8 +1241,8 @@ function showEvents(id) {
   if (id !== mode) return;
   const latest = race.events.at(-1), firstLap = latest.time && !(latest.previous && latest.previous.time);
   toast(firstLap
-    ? `<b>★ #${latest.id} kom runt hela banan · ${seconds(latest.time)}</b><small>Del 2 börjar: nu försöker bilarna kapa tiden</small>`
-    : `<b>★ Ny best practice: #${latest.id}</b> · ${result(latest)}<small>${improvement(latest)}</small>`,
+    ? `<b>★ #${latest.id} made it around the whole track · ${seconds(latest.time)}</b><small>Part 2 begins: now the cars try to cut the time</small>`
+    : `<b>★ New best practice: #${latest.id}</b> · ${result(latest)}<small>${improvement(latest)}</small>`,
     firstLap ? 5000 : speed > 4 ? 1500 : 2800);
   renderLog(id);
 }
@@ -1253,17 +1253,17 @@ addEventListener("gpustatus", event => { gpu = event.detail; });
 setInterval(() => {
   const decisions = counts.decisions - lastCounts.decisions, asked = counts.asked - lastCounts.asked;
   const realSpeed = (counts.steps - lastCounts.steps) / 60;
-  $("speedNote").textContent = !paused && realSpeed > 0 ? `just nu ${sv(realSpeed, realSpeed < 10 ? 1 : 0)}×` : "";
+  $("speedNote").textContent = !paused && realSpeed > 0 ? `now ${fmt(realSpeed, realSpeed < 10 ? 1 : 0)}×` : "";
   lastCounts = { ...counts };
   const ok = gpu && !gpu.error;
-  Gauges.render($("gGpu"), { value: ok ? gpu.util : null, max: 100, unit: "%", label: "GPU-belastning",
-    sub: ok ? (gpu.temperature == null ? gpu.name : `${gpu.temperature} °C`) : "ingen kontakt", tone: color("--teal") });
+  Gauges.render($("gGpu"), { value: ok ? gpu.util : null, max: 100, unit: "%", label: "GPU load",
+    sub: ok ? (gpu.temperature == null ? gpu.name : `${gpu.temperature} °C`) : "no contact", tone: color("--teal") });
   const tokens = usage.reduce((s, u) => s + u.tokens, 0), gpuMs = usage.reduce((s, u) => s + u.gpuMs, 0);
   const rate = gpuMs ? tokens / gpuMs * 1000 : null;
   const fromMemory = decisions ? Math.max(0, 1 - asked / decisions) : 0;
   Gauges.render($("gRate"), { value: rate, max: MODELS[mode].tokenScale, text: rate == null ? "–" : compact(rate),
-    label: "Tokens/s", sub: `${number(decisions)} beslut/s · ${percent(fromMemory)} ur minnet`, tone: color("--orange") });
-  pill("gpuPill", ok ? "Backend · " + gpu.name.replace(/^NVIDIA\s+(GeForce\s+)?/i, "") : "Backend · okänd");
+    label: "Tokens/s", sub: `${number(decisions)} decisions/s · ${percent(fromMemory)} from memory`, tone: color("--orange") });
+  pill("gpuPill", ok ? "Backend · " + gpu.name.replace(/^NVIDIA\s+(GeForce\s+)?/i, "") : "Backend · unknown");
 }, 1000);
 
 // ---- Modellval och knappar
@@ -1278,19 +1278,19 @@ function setMode(next) {
   trail = [];
   usage.length = 0;
   for (const button of $("mode").children) button.classList.toggle("on", button.dataset.mode === mode);
-  $("legend").innerHTML = '<span><i class="lg" style="background:var(--car-gold)"></i>best practice – längsta körningen hittills</span>' +
-    `<span><i class="lg" style="background:var(--car-model)"></i>provbilen – temperatur 0: bara ${name()}, utan best practice</span>` +
-    '<span><i class="lg" style="background:hsl(255 75% 56%)"></i>chansar lite (låg temperatur)</span>' +
-    '<span><i class="lg" style="background:hsl(345 75% 56%)"></i>chansar mycket (hög temperatur)</span>' +
-    '<span><i class="lg" style="background:var(--crash)"></i>✕ krasch – här åkte en bil av banan</span>' +
-    '<span><i class="lg" style="background:var(--fork)"></i>• lila – här slutar bilen följa best practice och kör själv</span>';
+  $("legend").innerHTML = '<span><i class="lg" style="background:var(--car-gold)"></i>best practice – longest run so far</span>' +
+    `<span><i class="lg" style="background:var(--car-model)"></i>test car – temperature 0: only ${name()}, no best practice</span>` +
+    '<span><i class="lg" style="background:hsl(255 75% 56%)"></i>explores a little (low temperature)</span>' +
+    '<span><i class="lg" style="background:hsl(345 75% 56%)"></i>explores a lot (high temperature)</span>' +
+    '<span><i class="lg" style="background:var(--crash)"></i>✕ crash – a car left the track here</span>' +
+    '<span><i class="lg" style="background:var(--fork)"></i>• purple – here a car stops following best practice and drives itself</span>';
   $("chartKeys").innerHTML = '<span><i class="lg" style="background:var(--orange)"></i>best practice</span>' +
-    '<span><i class="lg" style="background:var(--teal)"></i>provbilen · bara modellen</span>' +
-    '<span><i class="lg" style="background:var(--purple)"></i>snittet</span>';
-  $("readsTitle").innerHTML = `Vad <span class="model-name">${name()}</span> ser`;
+    '<span><i class="lg" style="background:var(--teal)"></i>test car · model alone</span>' +
+    '<span><i class="lg" style="background:var(--purple)"></i>average</span>';
+  $("readsTitle").innerHTML = `What <span class="model-name">${name()}</span> sees`;
   $("readsNote").textContent = MODELS[mode].where;
   const driver = drivers[mode];
-  status(driver.ready ? forkText(mode) : driver.error || `Laddar ${name()} …`);
+  status(driver.ready ? forkText(mode) : driver.error || `Loading ${name()} …`);
   renderLog(mode);
   drawChart();
   updatePanels();
@@ -1300,16 +1300,16 @@ function setMode(next) {
 // Sensorerna av: bilarna blir blinda och vet bara sin fart. Gäller från nästa beslut.
 $("sensors").onchange = () => {
   for (const race of Object.values(races)) race.blind = !$("sensors").checked;
-  status($("sensors").checked ? "Sensorerna är på igen: bilarna ser vägen." :
-    "Sensorerna är av: bilarna är blinda och vet bara sin egen fart.");
+  status($("sensors").checked ? "The sensors are on again: the cars see the road." :
+    "The sensors are off: the cars are blind and only know their own speed.");
 };
 // Antal bilar: gäller direkt – den pågående generationen startas om med det nya antalet.
 function setPopulation(n) {
   population = n;
   try { localStorage.setItem("racet-antal", n); } catch { /* bara för den här gången */ }
   for (const button of $("population").children) button.classList.toggle("on", +button.dataset.n === n);
-  $("brandName").textContent = `Racet · ${number(n)} bilar`;
-  document.title = `Racet – ${number(n)} bilar`;
+  $("brandName").textContent = `The Race · ${number(n)} cars`;
+  document.title = `The Race – ${number(n)} cars`;
   for (const [id, race] of Object.entries(races)) {
     race.population = n;
     const busy = drivers[id].busy;  // mitt i ett modellanrop gäller det nya antalet från nästa generation

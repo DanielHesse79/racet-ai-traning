@@ -1,7 +1,7 @@
-"""Startar racet: bilar som lär sig köra, med all-MiniLM-L6-v2 eller Laya på grafikkortet.
+"""Starts the race: cars that learn to drive, with all-MiniLM-L6-v2 or Laya on the GPU.
 
-    python play.py               öppnar racet i webbläsaren
-    python play.py --no-browser  startar bara servern, på http://127.0.0.1:8765
+    python play.py               opens the race in the browser
+    python play.py --no-browser  only starts the server, at http://127.0.0.1:8765
 """
 from engine import run
 

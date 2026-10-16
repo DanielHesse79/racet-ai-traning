@@ -1,20 +1,20 @@
-# Racet – AI-träning man kan se
+# The Race – AI training you can watch
 
-Bilar som lär sig köra. En liten språkmodell, **all-MiniLM-L6-v2** (eller **Laya**), läser
-vad varje bil ser som text och väljer manöver, och tränas på grafikkortet mellan
-generationerna. Ett pedagogiskt exempel på hur man tränar en modell i praktiken: best
-practice, krascher som straff, temperatur, och tre banor som visar om modellen har lärt sig
-köra eller bara memorerat. Designen följer Laya Training Visualization Tool (4Front 2 Market):
-mörk ram, ljus spelyta, instrument för grafikkortet.
+Cars that learn to drive. A small language model, **all-MiniLM-L6-v2** (or **Laya**), reads
+what each car sees as text, picks a maneuver, and is trained on the GPU between generations.
+A teaching example of how a model is trained in practice: best practice, crashes as
+punishment, temperature, and three tracks that show whether the model has learned to drive
+or only memorized the track. The design follows the Laya Training Visualization Tool
+(4Front 2 Market): dark frame, light track, gauges for the GPU.
 
 ```bash
 python play.py
 ```
 
-Öppnar racet på http://localhost:8765.
+Opens the race at http://localhost:8765.
 
-**Kom igång.** Racet kräver ett NVIDIA-grafikkort och en Python med PyTorch (CUDA) och
-transformers. Modellerna läses från Hugging Face-cachen, så ladda ned dem en gång först:
+**Getting started.** The race needs an NVIDIA GPU and a Python with PyTorch (CUDA) and
+transformers. The models are read from the Hugging Face cache, so download them once first:
 
 ```bash
 pip install torch transformers huggingface_hub --index-url https://download.pytorch.org/whl/cu128 --extra-index-url https://pypi.org/simple
@@ -28,103 +28,106 @@ huggingface-cli download sentence-transformers/all-MiniLM-L6-v2
 huggingface-cli download convaiinnovations/laya
 ```
 
-## Så fungerar racet
+## How the race works
 
-Två förare, valbara överst, som båda tränas på grafikkortet mellan generationerna. Bara den
-valda ligger på grafikkortet: byter man förare släpps den andra, och det den lärt sig läses in
-från sin fil igen när man byter tillbaka.
+Two drivers, chosen at the top, both trained on the GPU between generations. Only the chosen
+one is on the GPU: switching drivers releases the other, and what it has learned is loaded
+from its file again when you switch back.
 
-| Förare | Modell | Vad som tränas | Licens |
+| Driver | Model | What is trained | License |
 |---|---|---|---|
-| **all-MiniLM-L6-v2** (förvald) | `sentence-transformers/all-MiniLM-L6-v2`, en väldigt liten BERT, 22M parametrar, kan inget om racet från början | hela modellen, plus ett nytt beslutslager | Apache-2.0 |
-| **Laya** | `convaiinnovations/laya`, ModernBERT-large med beslutshuvud, 421M parametrar, förtränad för beslut | bara beslutshuvudet; den stora kodaren är fryst | Apache-2.0 |
+| **all-MiniLM-L6-v2** (default) | `sentence-transformers/all-MiniLM-L6-v2`, a very small BERT, 22M parameters, knows nothing about racing at the start | the whole model, plus a new decision layer | Apache-2.0 |
+| **Laya** | `convaiinnovations/laya`, ModernBERT-large with a decision head, 421M parameters, pre-trained for decisions | only the decision head; the large encoder is frozen | Apache-2.0 |
 
-En bil beskriver vad den ser i text – *"Speed: fast. The road ahead bends right. Distance to
-the road edge: far left close, …"* – och modellen väljer en av sex manövrer: skarpt vänster,
-vänster, rakt och gasa, höger, skarpt höger, rakt och bromsa.
+A car describes what it sees in text – *"Speed: fast. The road ahead bends right. Distance to
+the road edge: far left close, …"* – and the model picks one of six maneuvers: sharp left,
+left, straight and accelerate, right, sharp right, straight and brake.
 
-**Del 1 · runt banan.**
-1. Första generationen väljer alla bilar själva och kraschar. Den som kom längst blir
-   **best practice** – visas med två decimaler, t.ex. *11,59 % av banan*.
-2. Därefter kör alla 100 exakt som best practice fram till 0,5 s före dess krasch (lila
-   linje på banan). Där tar modellen över och bilarna gör lite olika val: de chansar lite
-   till mycket, det vill säga kör med temperatur 0,2–1,0. En av tio beslut är dessutom helt
-   slumpat (epsilon-greedy).
-3. Den som kommer längst blir ny best practice. Slås inget rekord flyttas punkten där bilarna börjar köra själva
-   0,5 s längre bakåt per generation, högst 3 s.
+**Part 1 · around the track.**
+1. In the first generation every car chooses for itself and crashes. The one that got
+   furthest becomes **best practice** – shown with two decimals, e.g. *11.59% of the track*.
+2. After that, all cars drive exactly like best practice until 0.5 s before its crash (the
+   purple line on the track). There the model takes over and the cars make slightly
+   different choices: they explore a little to a lot, i.e. drive with temperature 0.2–1.0.
+   One decision in ten is also completely random (epsilon-greedy).
+3. The car that gets furthest becomes the new best practice. If no record is set, the point
+   where the cars start driving themselves moves 0.5 s further back per generation, at most 3 s.
 
-**Del 2 · kapa tiden.** När första bilen kommer runt får varje bil en egen
-punkt där den börjar köra själv, utspridd över hela rekordvarvet (lila prickar). Bilarna provar nya linjer
-på många ställen samtidigt, och några kraschar på vägen. Med all-MiniLM-L6-v2 gick
-varvtiden från 34,5 s till 15,5 s på en generation och till 14,5 s i generation 24.
+**Part 2 · cut the time.** Once the first car makes it around, every car gets its own point
+where it starts driving itself, spread over the whole record lap (purple dots). The cars try
+new lines in many places at once, and some crash on the way. With all-MiniLM-L6-v2 the lap
+time went from 34.5 s to 15.5 s in one generation and to 14.5 s in generation 24.
 
-**Provbilen** (turkos) kör med temperatur 0 – alltid det modellen tror mest på – och följer
-aldrig best practice. Den kör på modellen ensam från start, så dess kurva (*bara modellen*)
-visar vad modellen själv har lärt sig. Övriga kurvor får hjälp av best practice.
+**The test car** (teal) drives with temperature 0 – always what the model believes in most –
+and never follows best practice. It drives on the model alone from the start, so its curve
+(*model alone*) shows what the model itself has learned. The other curves get help from best
+practice.
 
-**Bana: lärt sig eller memorerat?** Styrkortet har tre banor: *Träning*, *Spegelvänd*
-(vänsterkurvor blir högerkurvor) och *Ny bana*. Modellen följer med mellan banorna, men best
-practice och krascher hör till banan. Best practice är memorerade rattrörelser och fungerar
-bara på sin bana; det modellen lärt sig om fart, kurvor och vägkanter fungerar överallt.
-Uppmätt med all-MiniLM-L6-v2 efter 7 generationer på träningsbanan: provbilen kom 47 % på
-den spegelvända och 38 % på den nya banan på första försöket, och i båda fallen kom någon av
-de chansande bilarna runt hela varvet redan i första generationen.
+**Track: learned or memorized?** The controls have three tracks: *Training*, *Mirrored*
+(left turns become right turns) and *New track*. The model comes along between tracks, but
+best practice and crashes belong to each track. Best practice is memorized steering and only
+works on its own track; what the model has learned about speed, curves and road edges works
+everywhere. Measured with all-MiniLM-L6-v2 after 7 generations on the training track: on the
+first try the test car got 47% around the mirrored track and 38% around the new one, and in
+both cases one of the exploring cars made it around the whole lap in the very first generation.
 
-**Sensorer av** gör bilarna blinda: de vet bara sin egen fart, inte var vägkanten är eller
-hur vägen svänger. Gäller från nästa beslut.
+**Sensors off** makes the cars blind: they only know their own speed, not where the road edge
+is or how the road bends. Applies from the next decision.
 
-**Antal bilar** väljs i styrkortet: 10, 100, 1 000 eller 10 000. Ett byte startar om den
-pågående generationen. Uppmätt tid per simuleringssteg i webbläsaren, när alla bilar läser
-av sina sensorer (värsta fallet):
+**Cars** are chosen in the controls: 10, 100, 1,000 or 10,000. Switching restarts the
+current generation. Measured time per simulation step in the browser, with every car reading
+its sensors (the worst case):
 
-| Bilar | Per steg | Högsta fart |
+| Cars | Per step | Top speed |
 |---|---|---|
-| 100 | 0,15 ms | ~110× realtid |
-| 1 000 | 0,74 ms | ~22× |
-| 10 000 | 6,1 ms | ~2,7× |
+| 100 | 0.15 ms | ~110× real time |
+| 1,000 | 0.74 ms | ~22× |
+| 10,000 | 6.1 ms | ~2.7× |
 
-Taket är webbläsarens processor, inte modellerna: bilar med samma läge delar svar, så en
-generation har några hundra till ett par tusen olika lägen oavsett antal bilar. Träningen
-tar högst 3 000 lägen per generation, och Laya sparar högst 6 000 lägen på grafikkortet
-(runt 1,1 GB). Med all-MiniLM-L6-v2 och 10 000 bilar tog en generation 7–70 s; tiden
-går till simuleringen, modellen och träningen tar några sekunder.
+The limit is the browser's CPU, not the models: cars in the same situation share answers, so
+a generation has a few hundred to a couple of thousand different situations regardless of the
+number of cars. Training uses at most 3,000 situations per generation, and Laya keeps at most
+6,000 situations on the GPU (about 1.1 GB). With all-MiniLM-L6-v2 and 10,000 cars a
+generation took 7–70 s; the time goes to the simulation, while the model and the training
+take a few seconds.
 
-**Träningen.** Mellan generationerna: val som ledde till krasch inom åtta beslut straffas,
-val som tog bilen framåt förstärks, och modellen härmar best practice och generationens tio
-bästa. Alla krascher syns som röda kryss på banan.
+**Training.** Between generations: choices that led to a crash within eight decisions are
+punished, choices that moved the car forward are reinforced, and the model imitates best
+practice and the generation's ten best cars. Every crash shows as a red cross on the track.
 
-Uppmätt, 30–40 generationer per förare:
+Measured, 30–40 generations per driver:
 
-| | Runt hela banan | Varvtid sedan |
+| | Around the whole track | Lap time later |
 |---|---|---|
-| all-MiniLM-L6-v2 | generation 3 (52,5 s) | 16,6 s i generation 25 |
-| Laya | generation 13 (49,7 s) | 46,3 s i generation 40 |
+| all-MiniLM-L6-v2 | generation 3 (52.5 s) | 16.6 s in generation 25 |
+| Laya | generation 13 (49.7 s) | 46.3 s in generation 40 |
 
-Det förarna lärt sig sparas i `memory/race_laya.pt` och `memory/race_minibert.pt`, och
-racets rekord per bana i webbläsaren. **Börja om** nollställer föraren och dess rekord på alla banor.
-**Mellanslag** spelar och pausar.
+What the drivers have learned is saved in `memory/race_laya.pt` and `memory/race_minibert.pt`,
+and the race records per track in the browser. **Restart** resets the driver and its records
+on every track. **Space** plays and pauses.
 
-## Grafikkortet
+## The GPU
 
-Instrumenten visar grafikkortets belastning och modellens tokens/s. Belastningen kommer från
-`nvidia-smi` via servern, en gång per sekund. Tokens/s gäller den tid modellen faktiskt räknar.
+The gauges show the GPU load and the model's tokens/s. The load comes from `nvidia-smi` via
+the server, once per second. Tokens/s covers the time the model is actually computing.
 
-Racet belastar grafikkortet i korta ryck: modellen svarar på nya lägen och tränar mellan
-generationerna, medan bilarna simuleras i webbläsaren. all-MiniLM-L6-v2 tränar 6 varv över
-lägena per generation (runt 0,5–1 s); 16 varv lärde inte bättre men tog tre gånger så lång tid.
+The race loads the GPU in short bursts: the model answers new situations and trains between
+generations, while the cars are simulated in the browser. all-MiniLM-L6-v2 trains 6 passes
+over the situations per generation (about 0.5–1 s); 16 passes did not learn better but took
+three times as long.
 
-Laya på processorn i stället för grafikkortet: uppmätt 198 ms per beslut mot 25 ms, och
-13 s mot 0,16 s för 100 beslut på en gång. Det fungerar, men träningen mellan
-generationerna blir minuter i stället för sekunder.
+Laya on the CPU instead of the GPU: measured 198 ms per decision versus 25 ms, and 13 s versus
+0.16 s for 100 decisions at once. It works, but training between generations takes minutes
+instead of seconds.
 
-## Filer
+## Files
 
-- `play.py` – startar racet.
-- `engine.py` – servern: modellerna på grafikkortet, GPU-status och sidorna.
-- `laya_model.py` – Layas modell, laddad från Hugging Face-cachen (från convaiinnovations/laya, Apache-2.0).
-- `race_text.py` – lägestexten och manövrerna i racet.
-- `race_train.py` – träningen mellan generationerna, gemensam för förarna.
-- `race_laya.py`, `race_bert.py` – förarna Laya och den lilla BERT:en.
-- `race.html` – racet: simuleringen, banorna och instrumentpanelen; `theme.css` – designen;
-  `gpu.js` – GPU-status och instrument.
-- `memory/` – det förarna har lärt sig (skapas vid körning, finns inte i repot).
+- `play.py` – starts the race.
+- `engine.py` – the server: the models on the GPU, GPU status and the pages.
+- `laya_model.py` – Laya's model, loaded from the Hugging Face cache (from convaiinnovations/laya, Apache-2.0).
+- `race_text.py` – the situation text and the maneuvers.
+- `race_train.py` – training between generations, shared by the drivers.
+- `race_laya.py`, `race_bert.py` – the drivers Laya and all-MiniLM-L6-v2.
+- `race.html` – the race: the simulation, the tracks and the dashboard; `theme.css` – the
+  design; `gpu.js` – GPU status and gauges.
+- `memory/` – what the drivers have learned (created at runtime, not in the repo).

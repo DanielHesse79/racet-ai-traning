@@ -46,9 +46,9 @@ class ModelService:
             with ModelService.loading:
                 self.driver = self.create()
         except ImportError as error:
-            self.error = f"{self.name} kräver PyTorch med CUDA och transformers i den Python som kör play.py ({error})."
+            self.error = f"{self.name} needs PyTorch with CUDA and transformers in the Python that runs play.py ({error})."
         except Exception as error:  # saknad modell i cachen, CUDA-fel med mera: visas på sidan i stället
-            self.error = f"Kunde inte ladda {self.name}: {error}"
+            self.error = f"Could not load {self.name}: {error}"
         finally:
             self.loaded.set()
 
@@ -95,7 +95,7 @@ def gpu_status():
             ["nvidia-smi", f"--query-gpu={fields}", "--format=csv,noheader,nounits"], capture_output=True,
             text=True, timeout=5, check=True, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout
     except (OSError, subprocess.SubprocessError) as error:
-        return {"error": f"Kunde inte läsa nvidia-smi: {error}"}
+        return {"error": f"Could not read nvidia-smi: {error}"}
     name, *values = (value.strip() for value in output.splitlines()[0].split(","))
 
     def number(text):
@@ -144,10 +144,10 @@ def serve(port, open_browser):
             """Modellanropen: decide, learn och reset."""
             racer = self.racer()
             if racer is None:
-                return self.send_json({"error": "Okänd modell."}, 404)
+                return self.send_json({"error": "Unknown model."}, 404)
             driver = racer.driver
             if not driver:
-                return self.send_json({"error": racer.error or f"{racer.name} laddas fortfarande."}, 503)
+                return self.send_json({"error": racer.error or f"{racer.name} is still loading."}, 503)
             request = self.body()
             with racer.lock:
                 if action == "decide":
@@ -168,7 +168,7 @@ def serve(port, open_browser):
             elif self.path.startswith("/api/race/status"):
                 racer = self.racer()
                 if not racer:
-                    return self.send_json({"ready": False, "error": "Okänd modell."})
+                    return self.send_json({"ready": False, "error": "Unknown model."})
                 for other in RACERS.values():  # bara en förare åt gången på grafikkortet
                     if other is not racer:
                         other.unload()
@@ -189,7 +189,7 @@ def serve(port, open_browser):
 
     server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     url = f"http://127.0.0.1:{port}/"
-    print(f"Racet körs på {url}  (Ctrl+C avslutar)")
+    print(f"The race is running at {url}  (Ctrl+C quits)")
     if open_browser:
         webbrowser.open(url)
     try:
@@ -199,9 +199,9 @@ def serve(port, open_browser):
 
 
 def run():
-    parser = argparse.ArgumentParser(description="Racet: bilar som lär sig köra, med en modell på grafikkortet.")
+    parser = argparse.ArgumentParser(description="The Race: cars that learn to drive, with a model on the GPU.")
     parser.add_argument("--port", type=int, default=8765)
-    parser.add_argument("--no-browser", action="store_true", help="öppna inte webbläsaren automatiskt")
+    parser.add_argument("--no-browser", action="store_true", help="do not open the browser automatically")
     sys.stdout.reconfigure(encoding="utf-8")  # å, ä, ö även när utdata skickas vidare i Windows
     args = parser.parse_args()
     serve(args.port, not args.no_browser)

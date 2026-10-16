@@ -45,7 +45,7 @@
     try {
       status = await (await fetch("/api/gpu")).json();
     } catch {
-      status = { error: "Starta med python play.py för att se grafikkortet." };
+      status = { error: "Start with python play.py to see the GPU." };
     }
     window.dispatchEvent(new CustomEvent("gpustatus", { detail: status }));
   }
