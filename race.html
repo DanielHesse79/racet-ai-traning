@@ -42,6 +42,9 @@
     display: flex; flex-direction: column; gap: 6px; min-width: 0; backdrop-filter: blur(8px); }
   .curve-card .card-title { margin: 0; }
   .curve-card .chart-legend { margin: 0; gap: 2px 10px; }
+  /* Förklaringen visar det som syns på banan: bilarna, kryssen och de lila markeringarna. */
+  #legend > span, #chartKeys > span { display: inline-flex; align-items: center; gap: 6px; }
+  .lg-icon { flex: none; overflow: visible; }
   .gen-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   @media (max-width: 1280px) {
     .dash { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1266,6 +1269,32 @@ setInterval(() => {
   pill("gpuPill", ok ? "Backend · " + gpu.name.replace(/^NVIDIA\s+(GeForce\s+)?/i, "") : "Backend · unknown");
 }, 1000);
 
+// Förklaringens ikoner, ritade som på banan: en bit asfalt med bilen, krysset eller den lila markeringen.
+const legendIcon = {
+  box: body => `<svg class="lg-icon" width="28" height="14" viewBox="0 0 28 14" aria-hidden="true">` +
+    `<rect x="0.5" y="0.5" width="27" height="13" rx="4" fill="${color("--asphalt")}"/>${body}</svg>`,
+  car(fill, { alpha = 1, glow = false, outline = false, trail = false } = {}) {
+    return this.box(
+      (trail ? `<path d="M1 7H6" stroke="${color("--car-gold")}" stroke-width="2.2" stroke-linecap="round" opacity="0.7"/>` : "") +
+      `<rect x="5" y="2.5" width="18" height="9" rx="3" fill="${fill}" opacity="${alpha}"` +
+      (outline ? ` stroke="${color("--ink")}" stroke-width="1.4"` : "") +
+      (glow ? ` style="filter: drop-shadow(0 0 3px ${fill})"` : "") + "/>" +
+      (alpha === 1 ? `<rect x="15.5" y="3.8" width="3.5" height="6.4" fill="#0b0f1ab0"/>` : ""));  // vindruta
+  },
+  cross() {
+    return this.box(`<path d="M10.5 3.5L17.5 10.5M17.5 3.5L10.5 10.5" stroke="${color("--crash")}" stroke-width="1.8"/>`);
+  },
+  forkLine() {
+    return this.box(`<path d="M14 4V13.5" stroke="${color("--fork")}" stroke-width="2.4" stroke-dasharray="3 2"/>` +
+      `<circle cx="14" cy="3" r="2.2" fill="${color("--fork")}"/>`);
+  },
+  forkDot() {
+    return this.box(`<circle cx="14" cy="7" r="2.4" fill="${color("--fork")}" opacity="0.75"/>`);
+  },
+  line: (tone, width) => `<svg class="lg-icon" width="16" height="8" viewBox="0 0 16 8" aria-hidden="true">` +
+    `<path d="M1 4H15" stroke="${color(tone)}" stroke-width="${width}" stroke-linecap="round"/></svg>`,
+};
+
 // ---- Modellval och knappar
 function setMode(next) {
   const previous = mode;
@@ -1278,15 +1307,18 @@ function setMode(next) {
   trail = [];
   usage.length = 0;
   for (const button of $("mode").children) button.classList.toggle("on", button.dataset.mode === mode);
-  $("legend").innerHTML = '<span><i class="lg" style="background:var(--car-gold)"></i>best practice – longest run so far</span>' +
-    `<span><i class="lg" style="background:var(--car-model)"></i>test car – temperature 0: only ${name()}, no best practice</span>` +
-    '<span><i class="lg" style="background:hsl(255 75% 56%)"></i>explores a little (low temperature)</span>' +
-    '<span><i class="lg" style="background:hsl(345 75% 56%)"></i>explores a lot (high temperature)</span>' +
-    '<span><i class="lg" style="background:var(--crash)"></i>✕ crash – a car left the track here</span>' +
-    '<span><i class="lg" style="background:var(--fork)"></i>• purple – here a car stops following best practice and drives itself</span>';
-  $("chartKeys").innerHTML = '<span><i class="lg" style="background:var(--orange)"></i>best practice</span>' +
-    '<span><i class="lg" style="background:var(--teal)"></i>test car · model alone</span>' +
-    '<span><i class="lg" style="background:var(--purple)"></i>average</span>';
+  const item = (icon, text) => `<span>${icon}${text}</span>`;
+  $("legend").innerHTML =
+    item(legendIcon.car(color("--car-gold"), { trail: true, glow: true, outline: true }), "best practice – longest run so far") +
+    item(legendIcon.car(color("--car-model"), { outline: true }), `test car – temperature 0: only ${name()}, no best practice`) +
+    item(legendIcon.car(carColor({ role: "explorer", temperature: 0.2 })), "explores a little (low temperature)") +
+    item(legendIcon.car(carColor({ role: "explorer", temperature: 1 })), "explores a lot (high temperature)") +
+    item(legendIcon.car(color("--car-dead"), { alpha: 0.35 }), "crashed car") +
+    item(legendIcon.cross(), "crash – remembered where a car left the track") +
+    item(legendIcon.forkLine(), "part 1: all cars stop following best practice here") +
+    item(legendIcon.forkDot(), "part 2: each car's own point to stop following best practice");
+  $("chartKeys").innerHTML = item(legendIcon.line("--orange", 2.2), "best practice") +
+    item(legendIcon.line("--teal", 1.8), "test car · model alone") + item(legendIcon.line("--purple", 1.4), "average");
   $("readsTitle").innerHTML = `What <span class="model-name">${name()}</span> sees`;
   $("readsNote").textContent = MODELS[mode].where;
   const driver = drivers[mode];
