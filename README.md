@@ -63,7 +63,17 @@ and never follows best practice. It drives on the model alone from the start, so
 (*model alone*) shows what the model itself has learned. The other curves get help from best
 practice.
 
-**Track: learned or memorized?** The controls have three tracks: *Training*, *Mirrored*
+**Basic.** The simplest step, and the default for new visitors: a ring where curves do not
+matter. The cars are filled dots with constant speed and only three maneuvers – left,
+straight, right – and they can turn as sharply as they like, so the model only has to learn to
+stay on the road. Measured with an untrained all-MiniLM-L6-v2 and 100 cars: the test car
+got around the whole ring on its own in generation 3. Starting with an easier task is called
+*curriculum learning*, but here it did not pay off: after the ring, the test car on the
+training track stayed at 3.4% for five generations, while a model trained directly on the
+training track made a full lap in generation 4. The ring is too different – constant speed,
+gentle curves and no braking – so the model has to learn the real track almost from scratch.
+
+**Track: learned or memorized?** The controls also have three real tracks: *Training*, *Mirrored*
 (left turns become right turns) and *New track*. The model comes along between tracks, but
 best practice and crashes belong to each track. Best practice is memorized steering and only
 works on its own track; what the model has learned about speed, curves and road edges works

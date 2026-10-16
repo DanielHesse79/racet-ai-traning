@@ -34,7 +34,7 @@
   .speeds button:hover { color: var(--text); }
   .speeds button.on { background: rgba(255, 181, 71, 0.16); color: var(--orange); box-shadow: inset 0 0 0 1px rgba(255, 181, 71, 0.55); }
   .speed-label { display: flex; justify-content: space-between; margin-top: 12px; }
-  .speeds.tracks { grid-template-columns: repeat(3, 1fr); }
+  .speeds.tracks { grid-template-columns: repeat(4, 1fr); }
   .speeds.tracks button { font: 600 12px var(--sans); }
   /* Instrumentraden: rekordet, två instrument och inlärningskurvan med generationerna. */
   .dash { grid-template-columns: minmax(220px, 1.2fr) repeat(2, minmax(120px, 0.8fr)) minmax(300px, 2.2fr); }
@@ -144,6 +144,7 @@
         </div>
         <div class="speed-label"><span class="stat-k">Track</span><span class="stat-k">learned or memorized?</span></div>
         <div class="speeds tracks" id="trackPick" role="group" aria-label="Track">
+          <button type="button" data-track="3" title="A ring with constant speed and only left, straight or right: the model only has to learn to stay on the road">Basic</button>
           <button type="button" data-track="0" title="The track the model is trained on from the start">Training</button>
           <button type="button" data-track="1" title="The same track mirrored: left turns become right turns">Mirrored</button>
           <button type="button" data-track="2" title="A track the model has never seen">New track</button>
@@ -203,6 +204,9 @@ const BRANCH_BACK = 30;                // bilarna börjar välja själva 0,5 s (
 const MAX_BRANCH_BACK = 180;           // högst 3 s bakåt när rekordet står still
 const MAX_CRASH_MARKS = 3000;          // så många krascher syns på banan
 const MIN_SPEED = 1;                    // bilarna rullar alltid lite, så att stå still aldrig blir en fälla
+const BASIC_SPEED = 3;                  // basläget: konstant fart
+const BASIC_TURN = 0.2;                 // basläget: vridning per steg vid fullt rattutslag, oavsett fart
+const BASIC_ACTIONS = [1, 2, 3];        // basläget: bara vänster, rakt och höger
 const ELITE = 10;                       // modellen härmar de tio bästa bilarna i varje generation, plus best practice
 
 // Banans mittlinje, medurs från start/mål på nederkanten.
@@ -225,6 +229,11 @@ const TRACKS = [
     [420, 110], [330, 70], [220, 80], [140, 140], [180, 220], [300, 250], [340, 330], [280, 400], [150, 400],
     [80, 460], [90, 530],
   ] },
+  // Basläget: en ring där kurvorna inte spelar någon roll. Bilarna är prickar med konstant fart.
+  { id: "basic", name: "Basic ring", basic: true, control: Array.from({ length: 24 }, (_, k) => {
+    const a = Math.PI / 2 - k * Math.PI / 12;  // medurs från start/mål längst ned
+    return [500 + 250 * Math.cos(a), 310 + 250 * Math.sin(a)];
+  }) },
 ];
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -302,8 +311,13 @@ function sense(car, track) {
 }
 
 function move(car, track, step, steer, throttle, minSpeed = 0) {
-  car.speed = clamp((car.speed + throttle * ACCEL) * DRAG, minSpeed, MAX_SPEED);
-  car.angle += steer * TURN * Math.min(1, car.speed / 1.5);
+  if (track.basic) {  // basläget: konstant fart, och bilen svänger lika skarpt i alla farter
+    car.speed = BASIC_SPEED;
+    car.angle += steer * BASIC_TURN;
+  } else {  // en snabb bil hinner längre per steg, så den svänger i en vidare båge
+    car.speed = clamp((car.speed + throttle * ACCEL) * DRAG, minSpeed, MAX_SPEED);
+    car.angle += steer * TURN * Math.min(1, car.speed / 1.5);
+  }
   car.x += Math.cos(car.angle) * car.speed;
   car.y += Math.sin(car.angle) * car.speed;
   if (!onTrack(track, car.x, car.y)) {
@@ -451,6 +465,11 @@ function needsAnswers(race, policy) {
   return [...missing];
 }
 
+// Basläget har bara vänster, rakt och höger: övriga manövrer får sannolikheten 0.
+const allowed = (race, probs) => (race.track.basic ? probs.map((p, i) => (BASIC_ACTIONS.includes(i) ? p : 0)) : probs);
+const randomAction = race => (race.track.basic ? BASIC_ACTIONS[Math.floor(Math.random() * BASIC_ACTIONS.length)]
+  : Math.floor(Math.random() * ACTIONS.length));
+
 // Välj manöver ur modellens sannolikheter. Temperatur 0 = alltid det mest sannolika, högre = avvik mer.
 function choose(probs, temperature) {
   if (!temperature) return probs.indexOf(Math.max(...probs));
@@ -470,7 +489,7 @@ function raceStep(race, policy) {
         car.action = bp.actions[car.count] ?? 5;
       } else {
         car.action = car.role === "explorer" && Math.random() < EXPLORE
-          ? Math.floor(Math.random() * ACTIONS.length) : choose(policy.get(car.code), car.temperature);
+          ? randomAction(race) : choose(allowed(race, policy.get(car.code)), car.temperature);
         car.ownCodes.push(car.code);
         car.ownActions.push(car.action);
         car.ownBest.push(car.best);
@@ -570,9 +589,14 @@ const $ = id => document.getElementById(id);
 const canvas = $("race"), ctx = canvas.getContext("2d");
 const served = location.protocol.startsWith("http");
 const tracks = [];
-const trackOf = i => (tracks[i] ??= buildTrack(TRACKS[i].control));
+const trackOf = i => (tracks[i] ??= { ...buildTrack(TRACKS[i].control), basic: !!TRACKS[i].basic });
+const BASIC = TRACKS.findIndex(t => t.basic);
 let trackIndex = 0;
-try { trackIndex = clamp(Math.floor(+localStorage.getItem("racet-bana")) || 0, 0, TRACKS.length - 1); } catch { /* standard */ }
+// Nya besökare börjar med basläget, det enklaste steget.
+try {
+  const saved = localStorage.getItem("racet-bana");
+  trackIndex = saved == null ? BASIC : clamp(Math.floor(+saved) || 0, 0, TRACKS.length - 1);
+} catch { trackIndex = BASIC; }
 let track = trackOf(trackIndex);
 
 // Två förare som båda tränas på grafikkortet mellan generationerna: Laya, en förtränad beslutsmodell
@@ -796,6 +820,11 @@ async function finishGeneration(id) {
 }
 
 function forkText(id) {
+  const intro = races[id].track.basic ? "Basic: constant speed, only left, straight or right – curves do not matter. " : "";
+  return intro + forkStage(id);
+}
+
+function forkStage(id) {
   const race = races[id];
   if (!race.bestPractice && drivers[id].updates > 0) {
     return `${TRACKS[race.trackIndex].name}: ${MODELS[id].name} has not driven here before and there is no best practice. ` +
@@ -925,7 +954,8 @@ function drawCar(car, fill, { alpha = 1, glow = null, outline = false } = {}) {
   }
   ctx.fillStyle = typeof fill === "function" ? fill() : fill;
   ctx.beginPath();
-  ctx.roundRect(-9, -4.5, 18, 9, 3);
+  if (track.basic) ctx.arc(0, 0, 5.5, 0, Math.PI * 2);  // basläget: en prick, utan fram och bak
+  else ctx.roundRect(-9, -4.5, 18, 9, 3);
   ctx.fill();
   ctx.shadowBlur = 0;
   if (outline) {
@@ -933,7 +963,7 @@ function drawCar(car, fill, { alpha = 1, glow = null, outline = false } = {}) {
     ctx.strokeStyle = color("--ink");
     ctx.stroke();
   }
-  if (alpha === 1) {
+  if (alpha === 1 && !track.basic) {
     ctx.fillStyle = "#0b0f1ab0";  // vindruta
     ctx.fillRect(1.5, -3.2, 3.5, 6.4);
   }
@@ -982,6 +1012,11 @@ function drawPack(cars, fillOf, alpha = 1) {
     ctx.fillStyle = fill;
     ctx.beginPath();
     for (const car of group) {
+      if (track.basic) {
+        ctx.moveTo(car.x + 5.5, car.y);
+        ctx.arc(car.x, car.y, 5.5, 0, Math.PI * 2);
+        continue;
+      }
       const c = Math.cos(car.angle), s = Math.sin(car.angle), hx = 9, hy = 4.5;
       ctx.moveTo(car.x + c * hx - s * hy, car.y + s * hx + c * hy);
       ctx.lineTo(car.x + c * hx + s * hy, car.y + s * hx - c * hy);
@@ -1211,9 +1246,13 @@ function drawReads() {
     return;
   }
   $("reads").textContent = describe(keyText(greedy.code));
-  $("choices").innerHTML = ACTIONS.map((action, i) => `
-    <li class="${greedy.action === i ? "win" : ""}"><span>${action.label}</span>
-      <span class="pb"><i style="width:${(probs[i] * 100).toFixed(1)}%"></i></span><span class="pv">${Math.round(probs[i] * 100)}%</span></li>`).join("");
+  const shown = allowed(race, probs), total = shown.reduce((a, b) => a + b, 0) || 1;
+  $("choices").innerHTML = ACTIONS.map((action, i) => {
+    if (race.track.basic && !BASIC_ACTIONS.includes(i)) return "";
+    const p = shown[i] / total;
+    return `<li class="${greedy.action === i ? "win" : ""}"><span>${race.track.basic ? action.name : action.label}</span>
+      <span class="pb"><i style="width:${(p * 100).toFixed(1)}%"></i></span><span class="pv">${Math.round(p * 100)}%</span></li>`;
+  }).join("");
 }
 
 function renderLog(id) {
@@ -1285,17 +1324,18 @@ const legendIcon = {
   box: body => `<svg class="lg-icon" width="28" height="14" viewBox="0 0 28 14" aria-hidden="true">` +
     `<rect x="0.5" y="0.5" width="27" height="13" rx="4" fill="${color("--asphalt")}"/>${body}</svg>`,
   car(fill, { alpha = 1, glow = false, outline = false, trail = false, metal = false } = {}) {
-    const paint = metal ? "url(#lgGold)" : fill;
+    const paint = metal ? "url(#lgGold)" : fill, dot = track.basic;
     return this.box(
       (metal ? `<defs><linearGradient id="lgGold" x1="0" y1="0" x2="0" y2="1">` +
         `<stop offset="0" stop-color="${color("--gold-lo")}"/><stop offset="0.42" stop-color="${color("--gold-hi")}"/>` +
         `<stop offset="0.6" stop-color="${color("--car-gold")}"/><stop offset="1" stop-color="${color("--gold-lo")}"/>` +
         `</linearGradient></defs>` : "") +
-      (trail ? `<path d="M1 7H6" stroke="${color("--car-gold")}" stroke-width="2.2" stroke-linecap="round" opacity="0.7"/>` : "") +
-      `<rect x="5" y="2.5" width="18" height="9" rx="3" fill="${paint}" opacity="${alpha}"` +
+      (trail ? `<path d="M1 7H${dot ? 11 : 6}" stroke="${color("--car-gold")}" stroke-width="2.2" stroke-linecap="round" opacity="0.7"/>` : "") +
+      (dot ? `<circle cx="16" cy="7" r="5" fill="${paint}" opacity="${alpha}"`
+        : `<rect x="5" y="2.5" width="18" height="9" rx="3" fill="${paint}" opacity="${alpha}"`) +
       (outline ? ` stroke="${color("--ink")}" stroke-width="1.4"` : "") +
       (glow ? ` style="filter: drop-shadow(0 0 3px ${fill})"` : "") + "/>" +
-      (alpha === 1 ? `<rect x="15.5" y="3.8" width="3.5" height="6.4" fill="#0b0f1ab0"/>` : ""));  // vindruta
+      (alpha === 1 && !dot ? `<rect x="15.5" y="3.8" width="3.5" height="6.4" fill="#0b0f1ab0"/>` : ""));  // vindruta
   },
   cross() {
     return this.box(`<path d="M10.5 3.5L17.5 10.5M17.5 3.5L10.5 10.5" stroke="${color("--crash")}" stroke-width="1.8"/>`);
@@ -1323,6 +1363,19 @@ function setMode(next) {
   trail = [];
   usage.length = 0;
   for (const button of $("mode").children) button.classList.toggle("on", button.dataset.mode === mode);
+  renderLegend();
+  $("readsTitle").innerHTML = `What <span class="model-name">${name()}</span> sees`;
+  $("readsNote").textContent = MODELS[mode].where;
+  const driver = drivers[mode];
+  status(driver.ready ? forkText(mode) : driver.error || `Loading ${name()} …`);
+  renderLog(mode);
+  drawChart();
+  updatePanels();
+  updatePills();
+}
+
+// Förklaringen under banan och till inlärningskurvan. Bilarna är prickar i basläget.
+function renderLegend() {
   const item = (icon, text) => `<span>${icon}${text}</span>`;
   $("legend").innerHTML =
     item(legendIcon.car(color("--car-gold"), { trail: true, glow: true, outline: true, metal: true }), "best practice – longest run so far") +
@@ -1335,14 +1388,6 @@ function setMode(next) {
     item(legendIcon.forkDot(), "part 2: each car's own point to stop following best practice");
   $("chartKeys").innerHTML = item(legendIcon.line("--orange", 2.2), "best practice") +
     item(legendIcon.line("--teal", 1.8), "test car · model alone") + item(legendIcon.line("--purple", 1.4), "average");
-  $("readsTitle").innerHTML = `What <span class="model-name">${name()}</span> sees`;
-  $("readsNote").textContent = MODELS[mode].where;
-  const driver = drivers[mode];
-  status(driver.ready ? forkText(mode) : driver.error || `Loading ${name()} …`);
-  renderLog(mode);
-  drawChart();
-  updatePanels();
-  updatePills();
 }
 
 // Sensorerna av: bilarna blir blinda och vet bara sin fart. Gäller från nästa beslut.
@@ -1379,6 +1424,7 @@ function setTrack(i) {
   trail = [];
   for (const id of Object.keys(MODELS)) races[id] = openRace(id, i);
   for (const button of $("trackPick").children) button.classList.toggle("on", +button.dataset.track === i);
+  renderLegend();
   if (drivers[mode].ready) status(forkText(mode));
   renderLog(mode);
   drawChart();
