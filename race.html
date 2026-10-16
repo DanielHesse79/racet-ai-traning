@@ -14,7 +14,7 @@
   :root {
     --grass: #e6f5df; --grass-2: #dcefd3; --asphalt: #a9b1c0; --curb: #ef4b5f; --curb-2: #ffffff;
     --track-line: #ffffffb0; --ink: #1d2238; --crash: #e2304f; --fork: #7c5cf0;
-    --car-gold: #f5a623; --car-model: #0fb889; --car-dead: #7b8394;
+    --car-gold: #e0b034; --gold-hi: #fff3b8; --gold-lo: #9c6f0c; --car-model: #0fb889; --car-dead: #7b8394;
   }
   /* Styrkortet: spela, pausa och fart. */
   .transport { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -903,6 +903,17 @@ function drawTrackLayer(scale) {
   return layer;
 }
 
+// Best practice-bilen i guld: en gradient tvärs över bilen, så att den blänker som metall.
+// Skapas i bilens egna koordinater (drawCar har redan flyttat och vridit ritytan).
+function gold() {
+  const g = ctx.createLinearGradient(0, -4.5, 0, 4.5);
+  g.addColorStop(0, color("--gold-lo"));
+  g.addColorStop(0.42, color("--gold-hi"));
+  g.addColorStop(0.6, color("--car-gold"));
+  g.addColorStop(1, color("--gold-lo"));
+  return g;
+}
+
 function drawCar(car, fill, { alpha = 1, glow = null, outline = false } = {}) {
   ctx.save();
   ctx.translate(car.x, car.y);
@@ -912,7 +923,7 @@ function drawCar(car, fill, { alpha = 1, glow = null, outline = false } = {}) {
     ctx.shadowColor = glow;
     ctx.shadowBlur = 18;
   }
-  ctx.fillStyle = fill;
+  ctx.fillStyle = typeof fill === "function" ? fill() : fill;
   ctx.beginPath();
   ctx.roundRect(-9, -4.5, 18, 9, 3);
   ctx.fill();
@@ -1063,7 +1074,7 @@ function draw() {
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
-    drawCar(star, star.alive ? color("--car-gold") : color("--car-dead"),
+    drawCar(star, star.alive ? gold : color("--car-dead"),
       { glow: star.alive ? color("--car-gold") : null, alpha: star.alive ? 1 : 0.5, outline: star.alive });
   }
 }
@@ -1273,10 +1284,15 @@ setInterval(() => {
 const legendIcon = {
   box: body => `<svg class="lg-icon" width="28" height="14" viewBox="0 0 28 14" aria-hidden="true">` +
     `<rect x="0.5" y="0.5" width="27" height="13" rx="4" fill="${color("--asphalt")}"/>${body}</svg>`,
-  car(fill, { alpha = 1, glow = false, outline = false, trail = false } = {}) {
+  car(fill, { alpha = 1, glow = false, outline = false, trail = false, metal = false } = {}) {
+    const paint = metal ? "url(#lgGold)" : fill;
     return this.box(
+      (metal ? `<defs><linearGradient id="lgGold" x1="0" y1="0" x2="0" y2="1">` +
+        `<stop offset="0" stop-color="${color("--gold-lo")}"/><stop offset="0.42" stop-color="${color("--gold-hi")}"/>` +
+        `<stop offset="0.6" stop-color="${color("--car-gold")}"/><stop offset="1" stop-color="${color("--gold-lo")}"/>` +
+        `</linearGradient></defs>` : "") +
       (trail ? `<path d="M1 7H6" stroke="${color("--car-gold")}" stroke-width="2.2" stroke-linecap="round" opacity="0.7"/>` : "") +
-      `<rect x="5" y="2.5" width="18" height="9" rx="3" fill="${fill}" opacity="${alpha}"` +
+      `<rect x="5" y="2.5" width="18" height="9" rx="3" fill="${paint}" opacity="${alpha}"` +
       (outline ? ` stroke="${color("--ink")}" stroke-width="1.4"` : "") +
       (glow ? ` style="filter: drop-shadow(0 0 3px ${fill})"` : "") + "/>" +
       (alpha === 1 ? `<rect x="15.5" y="3.8" width="3.5" height="6.4" fill="#0b0f1ab0"/>` : ""));  // vindruta
@@ -1309,7 +1325,7 @@ function setMode(next) {
   for (const button of $("mode").children) button.classList.toggle("on", button.dataset.mode === mode);
   const item = (icon, text) => `<span>${icon}${text}</span>`;
   $("legend").innerHTML =
-    item(legendIcon.car(color("--car-gold"), { trail: true, glow: true, outline: true }), "best practice – longest run so far") +
+    item(legendIcon.car(color("--car-gold"), { trail: true, glow: true, outline: true, metal: true }), "best practice – longest run so far") +
     item(legendIcon.car(color("--car-model"), { outline: true }), `test car – temperature 0: only ${name()}, no best practice`) +
     item(legendIcon.car(carColor({ role: "explorer", temperature: 0.2 })), "explores a little (low temperature)") +
     item(legendIcon.car(carColor({ role: "explorer", temperature: 1 })), "explores a lot (high temperature)") +
