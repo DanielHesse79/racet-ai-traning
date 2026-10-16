@@ -7,16 +7,14 @@ practice, krascher som straff, temperatur, och tre banor som visar om modellen h
 köra eller bara memorerat. Designen följer Laya Training Visualization Tool (4Front 2 Market):
 mörk ram, ljus spelyta, instrument för grafikkortet.
 
-Repot har också fyra turbaserade spel där en beslutsmodell gör varje drag – se *Spelen*.
-
 ```bash
 python play.py
 ```
 
-Öppnar spelen på http://localhost:8765 och racet på http://localhost:8765/race.
+Öppnar racet på http://localhost:8765.
 
-**Kom igång.** Racet och Laya kräver ett NVIDIA-grafikkort och en Python med PyTorch (CUDA)
-och transformers. Modellerna läses från Hugging Face-cachen, så ladda ned dem en gång först:
+**Kom igång.** Racet kräver ett NVIDIA-grafikkort och en Python med PyTorch (CUDA) och
+transformers. Modellerna läses från Hugging Face-cachen, så ladda ned dem en gång först:
 
 ```bash
 pip install torch transformers huggingface_hub --index-url https://download.pytorch.org/whl/cu128 --extra-index-url https://pypi.org/simple
@@ -30,51 +28,16 @@ huggingface-cli download sentence-transformers/all-MiniLM-L6-v2
 huggingface-cli download convaiinnovations/laya
 ```
 
-Nimble i de turbaserade spelen körs via [Ollama](https://ollama.com)
-(`hf.co/ggml-org/Bespoke-Nimble-9B-v3-GGUF:Q8_0`). Utan PyTorch fungerar Nimble, men inte
-racet eller Laya.
-
-## Spelen
-
-| Flik | `--game` | Modellen väljer | Lär sig |
-|---|---|---|---|
-| Bilspelet – väj för bilar på en trefilig väg | `car` | vänster, rakt fram, höger | nej |
-| Bilspelet – självlärande | `learn` | vänster, rakt fram, höger | vilka drag som krockar i vilket läge |
-| Isvaken – självlärande | `lake` | upp, ner, vänster, höger | en karta över sjön |
-| Snake | `snake` | upp, ner, vänster, höger | nej |
-| Racet – 100 bilar (`/race`) | – | sex manövrer | Laya tränas mellan generationerna |
-
-## Modellerna
-
-| Modell | Vad det är | Körs | Licens |
-|---|---|---|---|
-| `nimble` (förvald) | `hf.co/ggml-org/Bespoke-Nimble-9B-v3-GGUF:Q8_0` | Ollama, `/v1/systemone` | CC BY-NC 4.0, ej kommersiellt |
-| `laya` | `convaiinnovations/laya`, ModernBERT-large med beslutshuvud | PyTorch på grafikkortet, från Hugging Face-cachen | Apache-2.0 |
-
-Nimble hämtas och får sitt korta namn med:
-
-```bash
-ollama pull hf.co/ggml-org/Bespoke-Nimble-9B-v3-GGUF:Q8_0
-```
-
-```bash
-ollama cp hf.co/ggml-org/Bespoke-Nimble-9B-v3-GGUF:Q8_0 nimble
-```
-
-I de turbaserade spelen spelar Nimble bra (Snake 29–30 äpplen, bilspelet 1000 drag utan
-krock). Laya otränad spelar nära slump där (krock efter 8 drag), som Layas egen
-dokumentation säger om grundmodellen. I racet tränas Laya och lär sig.
-
-## Racet – 100 bilar
+## Så fungerar racet
 
 Två förare, valbara överst, som båda tränas på grafikkortet mellan generationerna. Bara den
 valda ligger på grafikkortet: byter man förare släpps den andra, och det den lärt sig läses in
 från sin fil igen när man byter tillbaka.
 
-| Förare | Modell | Vad som tränas |
-|---|---|---|
-| **Laya** | `convaiinnovations/laya`, 421M parametrar, förtränad för beslut | bara beslutshuvudet; den stora kodaren är fryst |
-| **all-MiniLM-L6-v2** (förvald) | `sentence-transformers/all-MiniLM-L6-v2`, en väldigt liten BERT, 22M parametrar, kan inget om racet från början | hela modellen, plus ett nytt beslutslager |
+| Förare | Modell | Vad som tränas | Licens |
+|---|---|---|---|
+| **all-MiniLM-L6-v2** (förvald) | `sentence-transformers/all-MiniLM-L6-v2`, en väldigt liten BERT, 22M parametrar, kan inget om racet från början | hela modellen, plus ett nytt beslutslager | Apache-2.0 |
+| **Laya** | `convaiinnovations/laya`, ModernBERT-large med beslutshuvud, 421M parametrar, förtränad för beslut | bara beslutshuvudet; den stora kodaren är fryst | Apache-2.0 |
 
 En bil beskriver vad den ser i text – *"Speed: fast. The road ahead bends right. Distance to
 the road edge: far left close, …"* – och modellen väljer en av sex manövrer: skarpt vänster,
@@ -137,53 +100,31 @@ Uppmätt, 30–40 generationer per förare:
 | all-MiniLM-L6-v2 | generation 3 (52,5 s) | 16,6 s i generation 25 |
 | Laya | generation 13 (49,7 s) | 46,3 s i generation 40 |
 
-Nimble provades också som förare: 11,87 % redan i första generationen, men utan träning
-stannade den vid 21 %. Den är kvar i de turbaserade spelen, där den spelar bra.
-
 Det förarna lärt sig sparas i `memory/race_laya.pt` och `memory/race_minibert.pt`, och
 racets rekord per bana i webbläsaren. **Börja om** nollställer föraren och dess rekord på alla banor.
 **Mellanslag** spelar och pausar.
 
 ## Grafikkortet
 
-Instrumenten visar belastning, grafikminne, tokens/s och effekt. Värdena kommer från
-`nvidia-smi` via spelservern, en gång per sekund. Tokens/s gäller den tid modellen
-faktiskt räknar.
+Instrumenten visar grafikkortets belastning och modellens tokens/s. Belastningen kommer från
+`nvidia-smi` via servern, en gång per sekund. Tokens/s gäller den tid modellen faktiskt räknar.
+
+Racet belastar grafikkortet i korta ryck: modellen svarar på nya lägen och tränar mellan
+generationerna, medan bilarna simuleras i webbläsaren. all-MiniLM-L6-v2 tränar 6 varv över
+lägena per generation (runt 0,5–1 s); 16 varv lärde inte bättre men tog tre gånger så lång tid.
 
 Laya på processorn i stället för grafikkortet: uppmätt 198 ms per beslut mot 25 ms, och
 13 s mot 0,16 s för 100 beslut på en gång. Det fungerar, men träningen mellan
 generationerna blir minuter i stället för sekunder.
 
-## Självinlärningen i spelen
-
-Modellernas vikter ändras inte i `learn` och `lake`; det som växer är ett minne som
-skrivs in i lägesbeskrivningen inför varje drag. Det sparas per spel och modell i
-`memory/`, och **Glöm allt** nollställer det.
-
-- **Bilspelet – självlärande** minns läge → drag → hur många gånger det gick bra eller
-  slutade i krock.
-- **Isvaken – självlärande** minns en karta: vakar, säker is, och hur långt det verkar
-  vara till skatten från varje ruta. En ruta räknas som minst ett steg längre bort än sin
-  bästa granne, så återvändsgränder blir dyrare tills en annan väg ser bättre ut (LRTA\*).
-
-## Utan webbläsare
-
-```bash
-python play.py --game lake --headless 25
-```
-
-Spelar 25 omgångar i terminalen och skriver ut resultat och tokens/s.
-
 ## Filer
 
-- `play.py` – startar allt; här står listan över spel och modeller.
-- `engine.py` – Nimble via Ollama, Laya-tjänsten, minnet, webbservern, GPU-status och terminalläget.
+- `play.py` – startar racet.
+- `engine.py` – servern: modellerna på grafikkortet, GPU-status och sidorna.
 - `laya_model.py` – Layas modell, laddad från Hugging Face-cachen (från convaiinnovations/laya, Apache-2.0).
 - `race_text.py` – lägestexten och manövrerna i racet.
 - `race_train.py` – träningen mellan generationerna, gemensam för förarna.
 - `race_laya.py`, `race_bert.py` – förarna Laya och den lilla BERT:en.
-- `car.py`, `car_learn.py`, `lake.py`, `snake.py` – ett spel var.
-- `index.html`, `race.html` – sidorna; `theme.css` – gemensam design; `gpu.js` – GPU-status och instrument.
-- `memory/` – det de självlärande spelen och racet har lärt sig (skapas vid körning, finns inte i repot).
-
-Ollama på annan adress: sätt miljövariabeln `OLLAMA_URL`.
+- `race.html` – racet: simuleringen, banorna och instrumentpanelen; `theme.css` – designen;
+  `gpu.js` – GPU-status och instrument.
+- `memory/` – det förarna har lärt sig (skapas vid körning, finns inte i repot).

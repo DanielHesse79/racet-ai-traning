@@ -77,7 +77,6 @@
       <span class="run-pill teal" id="modelPill"><span class="pill-dot"></span><span>Laya · laddar</span></span>
       <span class="run-pill" id="gpuPill"><span class="pill-dot"></span><span>Backend · söker</span></span>
       <button type="button" class="btn" id="restart">Börja om</button>
-      <a class="btn" id="back" href="/" hidden>Övriga spel</a>
     </div>
   </header>
 
@@ -611,7 +610,6 @@ const counts = { decisions: 0, asked: 0, steps: 0 };
 let mode = "minibert";  // förvald: lär sig racet mycket snabbare än Laya
 let speed = 1, paused = false, trackLayer = null, trail = [], frame = 0, toastTimer = null, gpu = null;
 
-if (served) $("back").hidden = false;
 
 let colors = {};
 function color(name) {

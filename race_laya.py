@@ -4,9 +4,7 @@ och Layas beslutshuvud tränas mellan generationerna på hur det gick.
 Kodaren (ModernBERT-large) är fryst, så dess utdata för ett läge kan sparas och återanvändas.
 Bara beslutshuvudet (två transformer-lager och värderingen av alternativen) tränas.
 """
-import time
 from collections import OrderedDict
-from contextlib import contextmanager
 
 import torch
 
@@ -29,39 +27,10 @@ class LayaDriver(TrainedRacer):
             p.requires_grad_(True)
         self.question, self.markers = laya_model.question_ids(
             self.tokenizer, QUESTION, [f"{name}: {text}" for name, text in OPTIONS.items()])
-        self.temperatures = config["temperature_by_options"]
-        self.temperature = self.temperatures["choice:6-10"]  # racets sex manövrer
+        self.temperature = config["temperature_by_options"]["choice:6-10"]  # racets sex manövrer
         self.max_len = config["max_len"]
         self.hidden = OrderedDict()  # läge -> kodarens utdata på grafikkortet, senast använda sist
         self._setup(memory_file)
-
-    @contextmanager
-    def _original_head(self):
-        """Layas ursprungliga huvud, för spelen – inte det som racet har tränat."""
-        trained = {name: p.detach().clone() for name, p in self.trainable.items()}
-        self._set_weights(self.initial)
-        try:
-            yield
-        finally:
-            self._set_weights(trained)
-
-    def choose(self, state, question, options):
-        """En fråga med egna alternativ. Returnerar ({alternativ: sannolikhet}, tokenanvändning)."""
-        started = time.perf_counter()
-        ids, markers = laya_model.question_ids(self.tokenizer, question, options)
-        room = self.max_len - len(ids) - 1
-        ids = ids + self.tokenizer(state, add_special_tokens=False)["input_ids"][:room] + [self.tokenizer.sep_token_id]
-        ids, mask = self._pad([torch.tensor(ids)], self.tokenizer.pad_token_id)
-        marker_pos = torch.tensor([markers], device="cuda")
-        bucket = "choice:2" if len(options) <= 2 else "choice:3-5" if len(options) <= 5 else "choice:6-10"
-        with self._original_head(), torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16):
-            logits = self.model.decide(self.model.encode(ids, mask), mask, marker_pos,
-                                       torch.ones_like(marker_pos, dtype=torch.bool))
-        probs = torch.softmax(logits[0].float() / self.temperatures[bucket], -1).tolist()
-        torch.cuda.synchronize()
-        tokens = int(mask.sum())
-        gpu_ms = round((time.perf_counter() - started) * 1000, 1)
-        return dict(zip(options, probs)), {"tokens": tokens, "computed": tokens, "gpu_ms": gpu_ms}
 
     def _prepare(self, keys):
         """Kör den frysta kodaren för lägen den inte har sett. Returnerar antal tokens."""

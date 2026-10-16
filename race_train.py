@@ -44,10 +44,6 @@ class TrainedRacer:
     def vocabulary():
         return race_text.vocabulary()
 
-    @staticmethod
-    def vram():
-        return torch.cuda.memory_reserved()
-
     def _set_weights(self, weights):
         with torch.no_grad():
             for name, p in self.trainable.items():
